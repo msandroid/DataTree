@@ -1,0 +1,287 @@
+use chrono::{TimeZone, Utc};
+use serde::{Deserialize, Serialize};
+
+/// A generic time format wrapper holding a serialized `strftime` representation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TimeFormat(pub String);
+
+impl Default for TimeFormat {
+    fn default() -> Self {
+        Self(CommonTimeFormat::Iso8601.as_str().to_string())
+    }
+}
+
+/// Common international date/time display formats for UI selection.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum CommonTimeFormat {
+    /// ISO 8601 — `2024-06-13 12:04:05`  (international default)
+    #[default]
+    Iso8601,
+    /// ISO 8601 with T separator — `2024-06-13T12:04:05`
+    Iso8601T,
+    /// European (day-first) — `13/06/2024 12:04:05`
+    EuropeanSlash,
+    /// European (day-first, dots) — `13.06.2024 12:04:05`
+    EuropeanDot,
+    /// US (month-first) — `06/13/2024 12:04:05 PM`
+    UsSlash,
+    /// Short year, European — `13/06/24 12:04`
+    EuropeanShort,
+    /// Year-month-day, dots — `2024.06.13 12:04:05`
+    DotSeparated,
+    /// Locale-friendly long — `13 Jun 2024 12:04:05`
+    LongMonthName,
+    /// Unix timestamp (seconds) — `1718273045`
+    UnixTimestamp,
+    /// Date only, ISO — `2024-06-13`
+    DateOnly,
+}
+
+impl CommonTimeFormat {
+    /// All variants in display order
+    pub const ALL: &'static [Self] = &[
+        Self::Iso8601,
+        Self::Iso8601T,
+        Self::EuropeanSlash,
+        Self::EuropeanDot,
+        Self::UsSlash,
+        Self::EuropeanShort,
+        Self::DotSeparated,
+        Self::LongMonthName,
+        Self::UnixTimestamp,
+        Self::DateOnly,
+    ];
+
+    /// Human-readable menu label for each format.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Iso8601 => "YYYY-MM-DD HH:MM:SS",
+            Self::Iso8601T => "YYYY-MM-DDTHH:MM:SS",
+            Self::EuropeanSlash => "DD/MM/YYYY HH:MM:SS",
+            Self::EuropeanDot => "DD.MM.YYYY HH:MM:SS",
+            Self::UsSlash => "MM/DD/YYYY HH:MM:SS AM/PM",
+            Self::EuropeanShort => "DD/MM/YY HH:MM",
+            Self::DotSeparated => "YYYY.MM.DD HH:MM:SS",
+            Self::LongMonthName => "DD Mon YYYY HH:MM:SS",
+            Self::UnixTimestamp => "Unix Timestamp",
+            Self::DateOnly => "YYYY-MM-DD",
+        }
+    }
+
+    /// `strftime` compatible representation of the format.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Iso8601 => "%Y-%m-%d %H:%M:%S",
+            Self::Iso8601T => "%Y-%m-%dT%H:%M:%S",
+            Self::EuropeanSlash => "%d/%m/%Y %H:%M:%S",
+            Self::EuropeanDot => "%d.%m.%Y %H:%M:%S",
+            Self::UsSlash => "%m/%d/%Y %I:%M:%S %p",
+            Self::EuropeanShort => "%d/%m/%y %H:%M",
+            Self::DotSeparated => "%Y.%m.%d %H:%M:%S",
+            Self::LongMonthName => "%d %b %Y %H:%M:%S",
+            Self::UnixTimestamp => "%s",
+            Self::DateOnly => "%Y-%m-%d",
+        }
+    }
+}
+
+/// Translates Unix Epoch seconds to a date/time string using the given `TimeFormat`.
+///
+/// Returns `"Unknown"` for the `0` sentinel (unknown/missing timestamp).
+#[must_use]
+pub fn format_epoch(epoch_secs: u32, fmt: &TimeFormat) -> String {
+    if epoch_secs == 0 {
+        if fmt.0 == CommonTimeFormat::UnixTimestamp.as_str() {
+            return "0".to_string();
+        } else if fmt.0 == CommonTimeFormat::DateOnly.as_str() {
+            return "Pre-1970".to_string();
+        }
+        return "Unknown".to_string();
+    }
+
+    // Special-case: Unix timestamp needs no calendar decomposition.
+    if fmt.0 == CommonTimeFormat::UnixTimestamp.as_str() {
+        return epoch_secs.to_string();
+    }
+
+    Utc.timestamp_opt(epoch_secs as i64, 0)
+        .single()
+        .map_or_else(|| "Unknown".to_string(), |dt| dt.format(&fmt.0).to_string())
+}
+
+/// Translates `SystemTime` to seconds since Unix Epoch.
+///
+/// Pre-1970 times clamp to `0` (the sentinel for an unknown/missing timestamp);
+/// far-future values saturate at `u32::MAX` (year 2106).
+#[must_use]
+pub fn system_time_to_unix_timestamp(t: std::time::SystemTime) -> u32 {
+    t.duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .map_or(0, |duration| duration.as_secs().min(u32::MAX as u64) as u32)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{Duration, SystemTime};
+
+    use super::*;
+
+    fn tf(fmt: CommonTimeFormat) -> TimeFormat {
+        TimeFormat(fmt.as_str().to_string())
+    }
+
+    #[test]
+    fn test_format_epoch_unknown_sentinel() {
+        assert_eq!(format_epoch(0, &tf(CommonTimeFormat::DateOnly)), "Pre-1970");
+        assert_eq!(format_epoch(0, &tf(CommonTimeFormat::Iso8601)), "Unknown");
+    }
+
+    #[test]
+    fn test_format_epoch_saturating_max() {
+        // u32::MAX (year 2106) is the largest representable epoch; it formats normally.
+        assert_eq!(
+            format_epoch(u32::MAX, &tf(CommonTimeFormat::Iso8601)),
+            "2106-02-07 06:28:15"
+        );
+    }
+
+    #[test]
+    fn test_format_epoch_standard_iso() {
+        assert_eq!(
+            format_epoch(1_686_614_400, &tf(CommonTimeFormat::DateOnly)),
+            "2023-06-13"
+        );
+        assert_eq!(
+            format_epoch(1_686_657_845, &tf(CommonTimeFormat::Iso8601)),
+            "2023-06-13 12:04:05"
+        );
+    }
+
+    #[test]
+    fn test_format_epoch_leap_year() {
+        assert_eq!(
+            format_epoch(1_582_977_600, &tf(CommonTimeFormat::Iso8601)),
+            "2020-02-29 12:00:00"
+        );
+    }
+
+    #[test]
+    fn test_format_epoch_non_leap_year() {
+        assert_eq!(
+            format_epoch(1_614_513_600, &tf(CommonTimeFormat::Iso8601)),
+            "2021-02-28 12:00:00"
+        );
+    }
+
+    #[test]
+    fn test_format_epoch_european() {
+        assert_eq!(
+            format_epoch(1_686_657_845, &tf(CommonTimeFormat::EuropeanSlash)),
+            "13/06/2023 12:04:05"
+        );
+        assert_eq!(
+            format_epoch(1_686_657_845, &tf(CommonTimeFormat::EuropeanDot)),
+            "13.06.2023 12:04:05"
+        );
+    }
+
+    #[test]
+    fn test_format_epoch_us() {
+        assert_eq!(
+            format_epoch(1_686_657_845, &tf(CommonTimeFormat::UsSlash)),
+            "06/13/2023 12:04:05 PM"
+        );
+    }
+
+    #[test]
+    fn test_format_epoch_unix_timestamp() {
+        assert_eq!(
+            format_epoch(1_686_657_845, &tf(CommonTimeFormat::UnixTimestamp)),
+            "1686657845"
+        );
+        assert_eq!(format_epoch(0, &tf(CommonTimeFormat::UnixTimestamp)), "0");
+    }
+
+    #[test]
+    fn test_format_epoch_long_month_name() {
+        assert_eq!(
+            format_epoch(1_686_657_845, &tf(CommonTimeFormat::LongMonthName)),
+            "13 Jun 2023 12:04:05"
+        );
+    }
+
+    #[test]
+    fn test_system_time_to_unix_timestamp_epoch() {
+        let t = SystemTime::UNIX_EPOCH;
+        assert_eq!(system_time_to_unix_timestamp(t), 0);
+    }
+
+    #[test]
+    fn test_system_time_to_unix_timestamp_future() {
+        let t = SystemTime::UNIX_EPOCH + Duration::from_secs(123_456_789);
+        assert_eq!(system_time_to_unix_timestamp(t), 123_456_789);
+    }
+
+    #[test]
+    fn test_system_time_to_unix_timestamp_past() {
+        // Pre-1970 times clamp to the 0 "unknown" sentinel.
+        let t = SystemTime::UNIX_EPOCH - Duration::from_secs(98765);
+        assert_eq!(system_time_to_unix_timestamp(t), 0);
+    }
+
+    #[test]
+    fn test_common_time_format_all_complete_and_unique() {
+        assert_eq!(CommonTimeFormat::ALL.len(), 10);
+
+        // Every enum variant is listed in ALL.
+        for variant in [
+            CommonTimeFormat::Iso8601,
+            CommonTimeFormat::Iso8601T,
+            CommonTimeFormat::EuropeanSlash,
+            CommonTimeFormat::EuropeanDot,
+            CommonTimeFormat::UsSlash,
+            CommonTimeFormat::EuropeanShort,
+            CommonTimeFormat::DotSeparated,
+            CommonTimeFormat::LongMonthName,
+            CommonTimeFormat::UnixTimestamp,
+            CommonTimeFormat::DateOnly,
+        ] {
+            assert!(CommonTimeFormat::ALL.contains(&variant));
+        }
+
+        // Labels are unique and every strftime string is non-empty.
+        let mut labels = std::collections::HashSet::new();
+        for variant in CommonTimeFormat::ALL {
+            assert!(labels.insert(variant.label()));
+            assert!(!variant.as_str().is_empty());
+        }
+    }
+
+    #[test]
+    fn test_time_format_default_and_custom_format() {
+        assert_eq!(
+            TimeFormat::default(),
+            TimeFormat("%Y-%m-%d %H:%M:%S".to_string())
+        );
+
+        let custom = TimeFormat("%Y".to_string());
+        assert_eq!(custom, custom.clone());
+        // A custom strftime string passes straight through to chrono.
+        assert_eq!(format_epoch(1_704_067_200, &custom), "2024");
+    }
+
+    #[test]
+    fn test_format_epoch_iso8601_t_separator() {
+        let formatted = format_epoch(1_704_067_200, &tf(CommonTimeFormat::Iso8601T));
+        assert_eq!(formatted, "2024-01-01T00:00:00");
+        assert!(formatted.contains('T'));
+    }
+
+    #[test]
+    fn test_format_epoch_date_only_no_time_component() {
+        let formatted = format_epoch(1_704_067_200, &tf(CommonTimeFormat::DateOnly));
+        assert_eq!(formatted, "2024-01-01");
+        assert!(!formatted.contains(':'));
+    }
+}

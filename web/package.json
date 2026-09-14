@@ -1,0 +1,31 @@
+{
+  "name": "edirstat-web",
+  "version": "2.2.0",
+  "description": "eDirStat Static Landing Page",
+  "main": "index.js",
+  "scripts": {
+    "copy-assets": "node copy-assets.js",
+    "sync:devlogs": "python3 ../scripts/sync_devlogs.py",
+    "prebuild": "npm run copy-assets && npm run sync:devlogs",
+    "prebuild:assets": "npm run copy-assets",
+    "predev": "npm run copy-assets && npm run sync:devlogs",
+    "predev:assets": "npm run copy-assets",
+    "dev:assets": "vite build --watch",
+    "dev:zola": "zola serve",
+    "dev": "concurrently \"npm run dev:assets\" \"npm run dev:zola\"",
+    "build:assets": "vite build",
+    "build:zola": "zola build",
+    "build": "npm run build:assets && npm run build:zola"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "lucide": "^1.41.0",
+    "medium-zoom": "^1.1.0"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5",
+    "vite": "^8.2.2"
+  }
+}

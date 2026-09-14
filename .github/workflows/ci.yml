@@ -1,0 +1,289 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  test-linux:
+    name: Tests (Linux Container)
+    runs-on: ubuntu-latest
+    container:
+      image: registry.gitlab.com/xangelix-pub/containers/arch-rust-nightly-pin-common:latest
+      options: --user root # How I wish this were GitLab
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "*"
+
+      - name: Cache dependencies
+        uses: swatinem/rust-cache@v2
+
+      - name: Check typos
+        run: ./scripts/check.sh typos
+
+      - name: Check formatting
+        run: ./scripts/check.sh fmt
+
+      - name: Check for unused dependencies
+        run: ./scripts/check.sh shear
+
+      - name: Check lints
+        run: ./scripts/check.sh clippy
+
+      - name: Run tests
+        run: ./scripts/check.sh test
+
+      - name: Verify fallback fonts match translation corpus
+        run: ./scripts/check.sh fonts
+
+      - name: Verify licenses matching committed ones
+        run: |
+          if ! command -v cargo-about &> /dev/null; then
+            echo "cargo-about not found, installing..."
+            pacman -Syu --noconfirm --needed cargo-about
+          fi
+          ./scripts/check.sh licenses
+
+  test-macos:
+    name: Tests (macOS Native)
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-07-15
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Cache dependencies
+        uses: swatinem/rust-cache@v2
+
+      - name: Run tests
+        run: ./scripts/check.sh test
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    needs: [test-linux, test-macos]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    container:
+      image: registry.gitlab.com/xangelix-pub/containers/arch-rust-nightly-pin-common:latest
+      options: --user root
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v7
+
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "*"
+
+      - name: Cache dependencies
+        uses: swatinem/rust-cache@v2
+
+      - name: Compile optimized release binary
+        run: cargo build --release
+
+      - name: Stage Artifact
+        run: |
+          mkdir -p staging
+          cp target/release/edirstat staging/edirstat-linux-x86_64
+
+      - name: Upload Asset as Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: edirstat-linux-x86_64
+          path: staging/edirstat-linux-x86_64
+
+  build-wasm:
+    name: Build Web (wasm32)
+    runs-on: ubuntu-latest
+    container:
+      image: registry.gitlab.com/xangelix-pub/containers/arch-rust-nightly-pin-common:latest
+      options: --user root
+    needs: [test-linux, test-macos]
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v7
+
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "*"
+
+      - name: Cache dependencies
+        uses: swatinem/rust-cache@v2
+
+      - name: Install System Dependencies
+        run: |
+          pacman -Syu --noconfirm binaryen
+
+      - name: Add WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Install wasm-bindgen-cli matching lockfile
+        run: |
+          cargo install wasm-bindgen-cli --version $(grep -A 1 'name = "wasm-bindgen"' Cargo.lock | grep version | cut -d '"' -f 2)
+
+      - name: Compile and package web frontend
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          ./scripts/build_web.sh
+
+      - name: Upload Web Viewer Dist
+        uses: actions/upload-artifact@v7
+        with:
+          name: wasm-dist
+          path: crates/edirstat-gui/dist
+
+  build-windows:
+    name: Build & Package Windows (Inno Setup)
+    runs-on: windows-latest
+    needs: [test-linux, test-macos]
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v7
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-07-15
+          target: x86_64-pc-windows-msvc
+
+      - name: Cache dependencies
+        uses: swatinem/rust-cache@v2
+
+      - name: Compile optimized release binary
+        run: cargo build --release --target x86_64-pc-windows-msvc
+
+      - name: Restructure Build Path
+        run: |
+          mkdir -Force target\release
+          cp -Force target\x86_64-pc-windows-msvc\release\edirstat.exe target\release\edirstat.exe
+
+      - name: Compile Inno Setup Installer
+        shell: powershell
+        run: |
+          # 1. Extract the version string from Cargo.toml
+          $version = (Select-String -Path Cargo.toml -Pattern '^version\s*=\s*"(.*?)"').Matches.Groups[1].Value
+          echo "Detected Cargo Version: $version"
+
+          # 2. Compile passing the version dynamically
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=$version installer.iss
+
+      - name: Prepare Portable ZIP
+        run: |
+          compress-archive -Path target\release\edirstat.exe -DestinationPath staging\edirstat-windows-portable-x86_64.zip
+
+      - name: Upload Portable ZIP as Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: edirstat-windows-portable-x86_64.zip
+          path: staging\edirstat-windows-portable-x86_64.zip
+
+      - name: Upload Installer as Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: edirstat-setup-x86_64.exe
+          path: staging\edirstat-setup-x86_64.exe
+
+  build-macos:
+    name: Build & Package macOS
+    runs-on: macos-latest
+    needs: [test-linux, test-macos]
+    strategy:
+      matrix:
+        target: [aarch64-apple-darwin, x86_64-apple-darwin]
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v7
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-07-15
+          targets: ${{ matrix.target }}
+
+      - name: Cache dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Package (ad-hoc sign)
+        run: ./scripts/package_macos.sh --target "${{ matrix.target }}" --ad-hoc --validate
+
+      - name: Upload Asset as Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: edirstat-macos-${{ matrix.target }}
+          path: |
+            edirstat-macos-*.dmg
+            edirstat-macos-*.zip
+
+  deploy-web:
+    name: Deploy Web (Cloudflare Workers)
+    runs-on: ubuntu-latest
+    container:
+      image: registry.gitlab.com/xangelix-pub/containers/arch
+      options: --user root # How I wish this were GitLab
+    needs: [build-wasm]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+
+    permissions:
+      contents: read
+
+    # Allow only one concurrent deployment per branch
+    concurrency:
+      group: "cloudflare-deploy-${{ github.ref }}"
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v7
+
+      - name: Install System Dependencies
+        run: |
+          paru -Syu --noconfirm zola nodejs npm python-markdown
+
+      - name: Download WASM Dist
+        uses: actions/download-artifact@v8
+        with:
+          name: wasm-dist
+          path: crates/edirstat-gui/dist
+
+      - name: Install Node Dependencies & Build Assets
+        run: |
+          cd web
+          npm ci
+          npm run build
+
+      - name: Deploy to Cloudflare Workers (Prod)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          cd web
+          npx --yes wrangler deploy --env prod
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy to Cloudflare Workers (Dev)
+        if: github.ref == 'refs/heads/dev'
+        run: |
+          cd web
+          npx --yes wrangler deploy --env dev
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+

@@ -1,0 +1,2 @@
+docs/screenshots/*.png !text !filter !merge !diff
+docs/screenshots/*.jpg !text !filter !merge !diff

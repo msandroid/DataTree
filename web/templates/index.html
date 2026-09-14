@@ -1,0 +1,825 @@
+{% extends "base.html" %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "{{ config.title | safe }}",
+    "url": "{{ config.base_url | safe }}",
+    "description": "{{ config.description | safe }}",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": ["Windows", "macOS", "Linux"],
+    "softwareVersion": "{{ config.extra.version | safe }}",
+    "license": "https://opensource.org/licenses/MIT",
+    "isAccessibleForFree": true,
+    "downloadUrl": "{{ config.extra.mac_app_store_url | safe }}",
+    "installUrl": "{{ config.extra.itch_io_url | safe }}",
+    "codeRepository": "{{ config.extra.github_url | safe }}",
+    "screenshot": "{{ config.base_url | safe }}/{{ config.extra.og_image | safe }}",
+    "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+    },
+    "featureList": [
+        "Interactive Treemap Visualization with Subtree Zoom",
+        "Work-Stealing Multi-Threaded Directory Walker",
+        "NTFS MFT Fast Direct Scanner for Windows and Linux",
+        "Cryptographic 7-Stage Duplicate File Finder",
+        "Compressed Columnar Snapshot Export and Web Viewer",
+        "Multi-language support across 18 languages"
+    ],
+    "author": {
+        "@type": "Person",
+        "name": "{{ config.extra.author | default(value="xangelix") }}",
+        "url": "{{ config.extra.github_url | safe }}"
+    }
+}
+</script>
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "{{ config.title }}",
+    "url": "{{ config.base_url | safe }}",
+    "description": "{{ config.description | safe }}"
+}
+</script>
+{% endblock structured_data %}
+
+{% block content %}
+<!-- Grid Background -->
+<div class="grid-bg"></div>
+
+<!-- Header -->
+<header class="header">
+    <div class="header-container">
+        <a href="#" class="logo">
+            <img src="{{ get_url(path="assets/logo-nosubtext-transparent.svg") | safe }}" alt="eDirStat Logo" class="logo-img" width="160" height="40">
+        </a>
+        <nav class="nav">
+            <a href="#features" class="nav-link">Features</a>
+            <a href="#simulator" class="nav-link">Simulator</a>
+            <a href="#benchmarks" class="nav-link">Benchmarks</a>
+            <a href="#guide" class="nav-link">Guide</a>
+            <a href="#faq" class="nav-link">FAQ</a>
+            <a href="/blog/" class="nav-link">Blog</a>
+        </nav>
+        <div class="header-actions">
+            <a href="{{ config.extra.github_url }}" target="_blank" class="btn btn-secondary btn-icon" aria-label="GitHub">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path><path d="M9 18c-4.51 2-5-2-7-2"></path></svg>
+            </a>
+            <a href="/app/" class="btn btn-secondary btn-web-viewer">
+                <i data-lucide="layout"></i>
+                <span>Web Viewer</span>
+            </a>
+            <a href="#download" class="btn btn-primary btn-glow btn-header-cta">
+                <i data-lucide="download"></i>
+                <span>Download</span>
+            </a>
+            <button type="button" class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle navigation" aria-expanded="false">
+                <span class="hamburger-bar"></span>
+                <span class="hamburger-bar"></span>
+                <span class="hamburger-bar"></span>
+            </button>
+        </div>
+    </div>
+    <!-- Mobile Navigation Drawer -->
+    <div class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true">
+        <nav class="mobile-nav-links">
+            <a href="#features" class="mobile-nav-link">Features</a>
+            <a href="#simulator" class="mobile-nav-link">Simulator</a>
+            <a href="#benchmarks" class="mobile-nav-link">Benchmarks</a>
+            <a href="#guide" class="mobile-nav-link">Guide</a>
+            <a href="#faq" class="mobile-nav-link">FAQ</a>
+            <a href="/blog/" class="mobile-nav-link">Blog</a>
+        </nav>
+        <div class="mobile-nav-actions">
+            <a href="/app/" class="btn btn-secondary mobile-action-btn">
+                <i data-lucide="layout"></i>
+                <span>Web Viewer</span>
+            </a>
+            <a href="{{ config.extra.github_url }}" target="_blank" class="btn btn-secondary mobile-action-btn" aria-label="GitHub">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path><path d="M9 18c-4.51 2-5-2-7-2"></path></svg>
+                <span>GitHub Source</span>
+            </a>
+            <a href="#download" class="btn btn-primary btn-glow mobile-action-btn">
+                <i data-lucide="download"></i>
+                <span>Download eDirStat</span>
+            </a>
+        </div>
+    </div>
+</header>
+
+<!-- Main Container -->
+<main class="main-content">
+    
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-glow"></div>
+        <div class="hero-content">
+            <div class="hero-logo-wrapper">
+                <img src="{{ get_url(path="assets/logo-nosubtext-transparent.svg") | safe }}" alt="eDirStat Logo" class="hero-logo" width="220" height="55">
+            </div>
+            <div class="version-badge">
+                <span class="badge-dot"></span>
+                <span>v{{ config.extra.version }} Out Now</span>
+            </div>
+            
+            <h1 class="hero-title">
+                Reclaim Your Disk Space <br>
+                <span class="gradient-text">At Warp Speed</span>
+            </h1>
+            
+            <p class="hero-subtitle">
+                eDirStat is a modern, high-performance, cross-platform disk usage analyzer written in Rust.
+                Coupling a work-stealing multithreaded directory walker with a zero-copy arena data structure 
+                to scan millions of files in milliseconds.
+            </p>
+            
+            <div class="hero-actions-group" id="download">
+                <div class="hero-buttons">
+                    <a href="{{ config.extra.github_url }}" target="_blank" class="btn btn-secondary btn-lg">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path><path d="M9 18c-4.51 2-5-2-7-2"></path></svg>
+                        <span>Source Code</span>
+                    </a>
+                    <a href="/app/?demo=true" class="btn btn-secondary btn-lg">
+                        <i data-lucide="eye"></i>
+                        <span>Try Live Demo</span>
+                    </a>
+                </div>
+                
+                <div class="hero-store-row">
+                    <a href="{{ config.extra.mac_app_store_url }}" target="_blank" rel="noopener noreferrer" class="app-store-badge-btn" aria-label="Download eDirStat on the Mac App Store">
+                        <img src="{{ get_url(path="assets/app-store-badge.svg") | safe }}" alt="Download on the Mac App Store" class="app-store-badge-img" width="156" height="40">
+                    </a>
+                    <a href="{{ config.extra.itch_io_url }}" target="_blank" rel="noopener noreferrer" class="app-store-badge-btn" aria-label="Download eDirStat on itch.io">
+                        <img src="{{ get_url(path="assets/itch-badge.svg") | safe }}" alt="Download on itch.io" class="app-store-badge-img" width="156" height="40">
+                    </a>
+                </div>
+            </div>
+            
+            <div class="hero-note">
+                <i data-lucide="shield" class="note-icon"></i>
+                <span>100% open-source under the MIT license. Binaries available on the Mac App Store and itch.io.</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value"><span style="font-size: 1.2rem; font-weight: 600; color: var(--text-muted); -webkit-text-fill-color: var(--text-muted); opacity: 0.8; margin-right: 4px;">Up to</span>2.8x</div>
+                <div class="stat-label">Faster than WinDirStat</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value"><span style="font-size: 1.2rem; font-weight: 600; color: var(--text-muted); -webkit-text-fill-color: var(--text-muted); opacity: 0.8; margin-right: 4px;">Up to</span>2.5x</div>
+                <div class="stat-label">Faster than WizTree</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value"><span style="font-size: 1.2rem; font-weight: 600; color: var(--text-muted); -webkit-text-fill-color: var(--text-muted); opacity: 0.8; margin-right: 4px;">Up to</span>9.6x</div>
+                <div class="stat-label">Faster than QDirStat</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">100%</div>
+                <div class="stat-label">Safe & Native Rust</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Simulator Section (Treemap Mockup) -->
+    <section id="simulator" class="section">
+        <div class="section-header">
+            <h2 class="section-title">Experience the Speed</h2>
+            <p class="section-subtitle">Interact with this real-time simulator showing how eDirStat maps and visualizes disk space.</p>
+        </div>
+        
+        <div class="simulator-container glass-card">
+            <!-- Left panel: File Tree -->
+            <div class="simulator-tree">
+                <div class="panel-header">
+                    <i data-lucide="folder" class="panel-header-icon"></i>
+                    <span>Directory Explorer</span>
+                </div>
+                <div class="tree-content" id="sim-tree-root">
+                    <!-- Loaded dynamically via JS -->
+                </div>
+            </div>
+            
+            <!-- Right panel: Treemap & Details -->
+            <div class="simulator-visualization">
+                <div class="panel-header">
+                    <i data-lucide="eye" class="panel-header-icon"></i>
+                    <span>Treemap Diagram</span>
+                </div>
+                <div class="treemap-canvas" id="sim-treemap-canvas">
+                    <!-- Rendered dynamically via JS -->
+                </div>
+                <div class="selection-footer" id="sim-selection-footer">
+                    <div class="selection-info">
+                        <i data-lucide="file" class="file-icon" id="sim-footer-icon"></i>
+                        <span class="file-path" id="sim-footer-path">Hover or click a block above to inspect...</span>
+                    </div>
+                    <div class="selection-size" id="sim-footer-size"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Deduplicator Simulator Section -->
+    <section id="dedup-simulator" class="section">
+        <div class="section-header">
+            <h2 class="section-title">Cryptographic Deduplication</h2>
+            <p class="section-subtitle">Visualize how eDirStat's 7-stage pipeline isolates duplicate files and calculates reclaimable space without unnecessary disk reads.</p>
+        </div>
+        
+        <div class="dedup-simulator-container glass-card">
+            <!-- Left Column: Controls & Pipeline Stages -->
+            <div class="dedup-control-panel">
+                <div class="panel-header">
+                    <i data-lucide="activity" class="panel-header-icon"></i>
+                    <span>Pipeline Controller</span>
+                </div>
+                <div class="dedup-panel-content">
+                    <div class="dedup-config-row">
+                        <div class="config-item">
+                            <label for="dedup-sim-size">Min File Size</label>
+                            <select id="dedup-sim-size" class="sim-select">
+                                <option value="1024">1 KB (Default)</option>
+                                <option value="1048576">1 MB</option>
+                                <option value="104857600">100 MB</option>
+                            </select>
+                        </div>
+                        <div class="controller-actions">
+                            <button id="btn-start-dedup" class="btn btn-primary btn-glow">
+                                <i data-lucide="play" class="btn-icon-svg"></i>
+                                <span>Start Scan</span>
+                            </button>
+                            <button id="btn-reset-dedup" class="btn btn-secondary">
+                                <i data-lucide="rotate-ccw" class="btn-icon-svg"></i>
+                                <span>Reset</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 7-Stage Process List -->
+                    <div class="pipeline-stages-list">
+                        <div class="stage-step" id="step-1">
+                            <div class="stage-step-num">1</div>
+                            <div class="stage-step-info">
+                                <span class="stage-step-title">Size Partitioning</span>
+                                <span class="stage-step-desc">Grouping files by exact byte count. Singletons are discarded.</span>
+                            </div>
+                            <div class="stage-step-status" id="status-1">Idle</div>
+                        </div>
+                        <div class="stage-step" id="step-2">
+                            <div class="stage-step-num">2</div>
+                            <div class="stage-step-info">
+                                <span class="stage-step-title">Prefix Hashing</span>
+                                <span class="stage-step-desc">Hashing first 4KB to catch header or container differences.</span>
+                            </div>
+                            <div class="stage-step-status" id="status-2">Idle</div>
+                        </div>
+                        <div class="stage-step" id="step-3">
+                            <div class="stage-step-num">3</div>
+                            <div class="stage-step-info">
+                                <span class="stage-step-title">Midpoint Hashing</span>
+                                <span class="stage-step-desc">Hashing a 4KB chunk in the center of remaining files.</span>
+                            </div>
+                            <div class="stage-step-status" id="status-3">Idle</div>
+                        </div>
+                        <div class="stage-step" id="step-4">
+                            <div class="stage-step-num">4</div>
+                            <div class="stage-step-info">
+                                <span class="stage-step-title">Suffix Hashing</span>
+                                <span class="stage-step-desc">Hashing trailing 4KB to isolate tail metadata differences.</span>
+                            </div>
+                            <div class="stage-step-status" id="status-4">Idle</div>
+                        </div>
+                        <div class="stage-step" id="step-5">
+                            <div class="stage-step-num">5</div>
+                            <div class="stage-step-info">
+                                <span class="stage-step-title">Multi-Range Hashing</span>
+                                <span class="stage-step-desc">Periodic block sampling across files larger than 100MB.</span>
+                            </div>
+                            <div class="stage-step-status" id="status-5">Idle</div>
+                        </div>
+                        <div class="stage-step" id="step-6">
+                            <div class="stage-step-num">6</div>
+                            <div class="stage-step-info">
+                                <span class="stage-step-title">Full BLAKE3 Hashing</span>
+                                <span class="stage-step-desc">Full 256-bit cryptographic verification on remaining candidates.</span>
+                            </div>
+                            <div class="stage-step-status" id="status-6">Idle</div>
+                        </div>
+                        <div class="stage-step" id="step-7">
+                            <div class="stage-step-num">7</div>
+                            <div class="stage-step-info">
+                                <span class="stage-step-title">Timestamp Validation</span>
+                                <span class="stage-step-desc">Confirming last modified timestamps to protect against changes.</span>
+                            </div>
+                            <div class="stage-step-status" id="status-7">Idle</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column: Interactive Sandbox Stream & Live Results Table -->
+            <div class="dedup-display-panel">
+                <div class="panel-header">
+                    <i data-lucide="terminal" class="panel-header-icon"></i>
+                    <span>Active Sandbox Processing Stream & Live Logs</span>
+                </div>
+                
+                <div class="dedup-display-content">
+                    <!-- Sandbox file animation screen -->
+                    <div class="dedup-animation-canvas" id="dedup-canvas">
+                        <div class="canvas-grid-bg"></div>
+                        <div class="sandbox-instructions" id="canvas-instructions">
+                            <div class="instruction-glow"></div>
+                            <i data-lucide="activity" class="instruction-icon"></i>
+                            <h3>Deduplication Stream Ready</h3>
+                            <p>Click "Start Scan" to watch candidate files flow through our 7-stage filter system.</p>
+                        </div>
+                        <!-- Animated files and lanes are generated here -->
+                    </div>
+                    
+                    <!-- Live Console Logger -->
+                    <div class="virtual-console" id="virtual-console">
+                        <div class="console-line text-dim">[SYSTEM] Engine online. Awaiting control signal.</div>
+                    </div>
+                    
+                    <!-- Live Deduplicator Results View (Mimicking actual eDirStat table view) -->
+                    <div class="dedup-table-view collapsed" id="dedup-table-view">
+                        <div class="table-actions-header">
+                            <div class="action-summary">
+                                <span class="summary-label">Potential Reclaimable Space:</span>
+                                <span class="summary-value text-success" id="reclaim-amount">0 Bytes</span>
+                            </div>
+                            <div class="table-action-buttons">
+                                <button class="btn btn-secondary btn-sm" id="btn-reclaim-hardlink">
+                                    <i data-lucide="link2"></i>
+                                    <span>Replace with Hardlinks</span>
+                                </button>
+                                <button class="btn btn-secondary btn-sm" id="btn-reclaim-delete">
+                                    <i data-lucide="trash2"></i>
+                                    <span>Delete Permanently</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="dedup-table-container">
+                            <table class="sim-dedup-table">
+                                <thead>
+                                    <tr>
+                                        <th width="30"></th>
+                                        <th>Filename</th>
+                                        <th>Folder Path</th>
+                                        <th>Size</th>
+                                        <th>Reclaimable</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sim-dedup-rows">
+                                    <!-- Populated dynamically after animation finishes -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benchmarks Section -->
+    <section id="benchmarks" class="section">
+        <div class="section-header">
+            <h2 class="section-title">Cross-Platform Performance</h2>
+            <p class="section-subtitle">Real benchmarks comparing directory traversal times on different platforms and filesystems. Select a device drive to see the results.</p>
+        </div>
+        
+        <div class="benchmarks-container glass-card">
+            <div class="benchmarks-sidebar">
+                <button class="benchmark-tab active" data-target="mzvlb">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M0 3.449L9.75 2.1v9.451H0V3.449zM0 12.45h9.75v9.45L0 20.551v-8.101zM11.25 1.899L24 0v11.55H11.25V1.899zM11.25 12.45H24v11.55l-12.75-1.9v-9.65z"/>
+                    </svg>
+                    <div class="tab-info">
+                        <span class="tab-title">NVMe PCIe Gen 3 SSD</span>
+                        <span class="tab-desc">Samsung MZVLB512HBJQ [ntfs]</span>
+                    </div>
+                </button>
+                <button class="benchmark-tab" data-target="nvme">
+                    <svg viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8.996 4.497c.104-.076.1-.168.186-.158s.022.102-.098.207c-.12.104-.308.243-.46.323-.291.152-.631.336-.993.336s-.647-.167-.853-.33c-.102-.082-.186-.162-.248-.221-.11-.086-.096-.207-.052-.204.075.01.087.109.134.153.064.06.144.137.241.214.195.154.454.304.778.304s.702-.19.932-.32c.13-.073.297-.204.433-.304M7.34 3.781c.055-.02.123-.031.174-.003.011.006.024.021.02.034-.012.038-.074.032-.11.05-.032.017-.057.052-.093.054-.034 0-.086-.012-.09-.046-.007-.044.058-.072.1-.089m.581-.003c.05-.028.119-.018.173.003.041.017.106.045.1.09-.004.033-.057.046-.09.045-.036-.002-.062-.037-.093-.053-.036-.019-.098-.013-.11-.051-.004-.013.008-.028.02-.034"/>
+                        <path fill-rule="evenodd" d="M8.446.019c2.521.003 2.38 2.66 2.364 4.093-.01.939.509 1.574 1.04 2.244.474.56 1.095 1.38 1.45 2.32.29.765.402 1.613.115 2.465a.8.8 0 0 1 .254.152l.001.002c.207.175.271.447.329.698.058.252.112.488.224.615.344.382.494.667.48.922-.015.254-.203.43-.435.57-.465.28-1.164.491-1.586 1.002-.443.527-.99.83-1.505.871a1.25 1.25 0 0 1-1.256-.716v-.001a1 1 0 0 1-.078-.21c-.67.038-1.252-.165-1.718-.128-.687.038-1.116.204-1.506.206-.151.331-.445.547-.808.63-.5.114-1.126 0-1.743-.324-.577-.306-1.31-.278-1.85-.39-.27-.057-.51-.157-.626-.384-.116-.226-.095-.538.07-.988.051-.16.012-.398-.026-.648a2.5 2.5 0 0 1-.037-.369c0-.133.022-.265.087-.386v-.002c.14-.266.368-.377.577-.451s.397-.125.53-.258c.143-.15.27-.374.443-.56q.036-.037.073-.07c-.081-.538.007-1.105.192-1.662.393-1.18 1.223-2.314 1.811-3.014.502-.713.65-1.287.701-2.016.042-.997-.705-3.974 2.112-4.2q.168-.015.321-.013m2.596 10.866-.03.016c-.223.121-.348.337-.427.656-.08.32-.107.733-.13 1.206v.001c-.023.37-.192.824-.31 1.267s-.176.862-.036 1.128v.002c.226.452.608.636 1.051.601s.947-.304 1.36-.795c.474-.576 1.218-.796 1.638-1.05.21-.126.324-.242.333-.4.009-.157-.097-.403-.425-.767-.17-.192-.217-.462-.274-.71-.056-.247-.122-.468-.26-.585l-.001-.001c-.18-.157-.356-.17-.565-.164q-.069.001-.14.005c-.239.275-.805.612-1.197.508-.359-.09-.562-.508-.587-.918m-7.204.03H3.83c-.189.002-.314.09-.44.225-.149.158-.276.382-.445.56v.002h-.002c-.183.184-.414.239-.61.31-.195.069-.353.143-.46.35v.002c-.085.155-.066.378-.029.624.038.245.096.507.018.746v.002l-.001.002c-.157.42-.516.64-.91.564-.383-.075-.615-.47-.68-.873v-.002c-.042-.25-.098-.466-.23-.585C.283 14.866.11 14.85-.1 14.856q-.06.002-.12.008c.196-.282.684-.666 1.096-.612.39.052.627.424.71.838.077.387.214.544.384.629.17.086.38.033.565-.072z"/>
+                    </svg>
+                    <div class="tab-info">
+                        <span class="tab-title">NVMe PCIe Gen 4 SSD</span>
+                        <span class="tab-desc">Samsung 990 Pro [btrfs]</span>
+                    </div>
+                </button>
+                <button class="benchmark-tab" data-target="sata">
+                    <svg viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8.996 4.497c.104-.076.1-.168.186-.158s.022.102-.098.207c-.12.104-.308.243-.46.323-.291.152-.631.336-.993.336s-.647-.167-.853-.33c-.102-.082-.186-.162-.248-.221-.11-.086-.096-.207-.052-.204.075.01.087.109.134.153.064.06.144.137.241.214.195.154.454.304.778.304s.702-.19.932-.32c.13-.073.297-.204.433-.304M7.34 3.781c.055-.02.123-.031.174-.003.011.006.024.021.02.034-.012.038-.074.032-.11.05-.032.017-.057.052-.093.054-.034 0-.086-.012-.09-.046-.007-.044.058-.072.1-.089m.581-.003c.05-.028.119-.018.173.003.041.017.106.045.1.09-.004.033-.057.046-.09.045-.036-.002-.062-.037-.093-.053-.036-.019-.098-.013-.11-.051-.004-.013.008-.028.02-.034"/>
+                        <path fill-rule="evenodd" d="M8.446.019c2.521.003 2.38 2.66 2.364 4.093-.01.939.509 1.574 1.04 2.244.474.56 1.095 1.38 1.45 2.32.29.765.402 1.613.115 2.465a.8.8 0 0 1 .254.152l.001.002c.207.175.271.447.329.698.058.252.112.488.224.615.344.382.494.667.48.922-.015.254-.203.43-.435.57-.465.28-1.164.491-1.586 1.002-.443.527-.99.83-1.505.871a1.25 1.25 0 0 1-1.256-.716v-.001a1 1 0 0 1-.078-.21c-.67.038-1.252-.165-1.718-.128-.687.038-1.116.204-1.506.206-.151.331-.445.547-.808.63-.5.114-1.126 0-1.743-.324-.577-.306-1.31-.278-1.85-.39-.27-.057-.51-.157-.626-.384-.116-.226-.095-.538.07-.988.051-.16.012-.398-.026-.648a2.5 2.5 0 0 1-.037-.369c0-.133.022-.265.087-.386v-.002c.14-.266.368-.377.577-.451s.397-.125.53-.258c.143-.15.27-.374.443-.56q.036-.037.073-.07c-.081-.538.007-1.105.192-1.662.393-1.18 1.223-2.314 1.811-3.014.502-.713.65-1.287.701-2.016.042-.997-.705-3.974 2.112-4.2q.168-.015.321-.013m2.596 10.866-.03.016c-.223.121-.348.337-.427.656-.08.32-.107.733-.13 1.206v.001c-.023.37-.192.824-.31 1.267s-.176.862-.036 1.128v.002c.226.452.608.636 1.051.601s.947-.304 1.36-.795c.474-.576 1.218-.796 1.638-1.05.21-.126.324-.242.333-.4.009-.157-.097-.403-.425-.767-.17-.192-.217-.462-.274-.71-.056-.247-.122-.468-.26-.585l-.001-.001c-.18-.157-.356-.17-.565-.164q-.069.001-.14.005c-.239.275-.805.612-1.197.508-.359-.09-.562-.508-.587-.918m-7.204.03H3.83c-.189.002-.314.09-.44.225-.149.158-.276.382-.445.56v.002h-.002c-.183.184-.414.239-.61.31-.195.069-.353.143-.46.35v.002c-.085.155-.066.378-.029.624.038.245.096.507.018.746v.002l-.001.002c-.157.42-.516.64-.91.564-.383-.075-.615-.47-.68-.873v-.002c-.042-.25-.098-.466-.23-.585C.283 14.866.11 14.85-.1 14.856q-.06.002-.12.008c.196-.282.684-.666 1.096-.612.39.052.627.424.71.838.077.387.214.544.384.629.17.086.38.033.565-.072z"/>
+                    </svg>
+                    <div class="tab-info">
+                        <span class="tab-title">SATA SSD</span>
+                        <span class="tab-desc">Samsung 870 QVO [btrfs]</span>
+                    </div>
+                </button>
+                <button class="benchmark-tab" data-target="hdd">
+                    <svg viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8.996 4.497c.104-.076.1-.168.186-.158s.022.102-.098.207c-.12.104-.308.243-.46.323-.291.152-.631.336-.993.336s-.647-.167-.853-.33c-.102-.082-.186-.162-.248-.221-.11-.086-.096-.207-.052-.204.075.01.087.109.134.153.064.06.144.137.241.214.195.154.454.304.778.304s.702-.19.932-.32c.13-.073.297-.204.433-.304M7.34 3.781c.055-.02.123-.031.174-.003.011.006.024.021.02.034-.012.038-.074.032-.11.05-.032.017-.057.052-.093.054-.034 0-.086-.012-.09-.046-.007-.044.058-.072.1-.089m.581-.003c.05-.028.119-.018.173.003.041.017.106.045.1.09-.004.033-.057.046-.09.045-.036-.002-.062-.037-.093-.053-.036-.019-.098-.013-.11-.051-.004-.013.008-.028.02-.034"/>
+                        <path fill-rule="evenodd" d="M8.446.019c2.521.003 2.38 2.66 2.364 4.093-.01.939.509 1.574 1.04 2.244.474.56 1.095 1.38 1.45 2.32.29.765.402 1.613.115 2.465a.8.8 0 0 1 .254.152l.001.002c.207.175.271.447.329.698.058.252.112.488.224.615.344.382.494.667.48.922-.015.254-.203.43-.435.57-.465.28-1.164.491-1.586 1.002-.443.527-.99.83-1.505.871a1.25 1.25 0 0 1-1.256-.716v-.001a1 1 0 0 1-.078-.21c-.67.038-1.252-.165-1.718-.128-.687.038-1.116.204-1.506.206-.151.331-.445.547-.808.63-.5.114-1.126 0-1.743-.324-.577-.306-1.31-.278-1.85-.39-.27-.057-.51-.157-.626-.384-.116-.226-.095-.538.07-.988.051-.16.012-.398-.026-.648a2.5 2.5 0 0 1-.037-.369c0-.133.022-.265.087-.386v-.002c.14-.266.368-.377.577-.451s.397-.125.53-.258c.143-.15.27-.374.443-.56q.036-.037.073-.07c-.081-.538.007-1.105.192-1.662.393-1.18 1.223-2.314 1.811-3.014.502-.713.65-1.287.701-2.016.042-.997-.705-3.974 2.112-4.2q.168-.015.321-.013m2.596 10.866-.03.016c-.223.121-.348.337-.427.656-.08.32-.107.733-.13 1.206v.001c-.023.37-.192.824-.31 1.267s-.176.862-.036 1.128v.002c.226.452.608.636 1.051.601s.947-.304 1.36-.795c.474-.576 1.218-.796 1.638-1.05.21-.126.324-.242.333-.4.009-.157-.097-.403-.425-.767-.17-.192-.217-.462-.274-.71-.056-.247-.122-.468-.26-.585l-.001-.001c-.18-.157-.356-.17-.565-.164q-.069.001-.14.005c-.239.275-.805.612-1.197.508-.359-.09-.562-.508-.587-.918m-7.204.03H3.83c-.189.002-.314.09-.44.225-.149.158-.276.382-.445.56v.002h-.002c-.183.184-.414.239-.61.31-.195.069-.353.143-.46.35v.002c-.085.155-.066.378-.029.624.038.245.096.507.018.746v.002l-.001.002c-.157.42-.516.64-.91.564-.383-.075-.615-.47-.68-.873v-.002c-.042-.25-.098-.466-.23-.585C.283 14.866.11 14.85-.1 14.856q-.06.002-.12.008c.196-.282.684-.666 1.096-.612.39.052.627.424.71.838.077.387.214.544.384.629.17.086.38.033.565-.072z"/>
+                    </svg>
+                    <div class="tab-info">
+                        <span class="tab-title">Mechanical HDD</span>
+                        <span class="tab-desc">Toshiba MG09SACA [btrfs]</span>
+                    </div>
+                </button>
+            </div>
+            <div class="benchmarks-chart-wrapper">
+                <div class="chart-header">
+                    <h3 class="chart-title" id="benchmark-title">SAMSUNG MZVLB512HBJQ PCIe SSD</h3>
+                    <span class="chart-subtitle" id="benchmark-desc">Scanning Windows system directories containing deep system libraries and DLLs.</span>
+                </div>
+                <div class="chart-canvas-container">
+                    <canvas id="benchmarkChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Benchmark Disclaimer -->
+        <div class="benchmark-disclaimer" style="margin-top: 32px; opacity: 0.5; font-size: 0.8rem; line-height: 1.5; text-align: left;">
+            <strong>Benchmark Disclaimer & Configuration:</strong> 
+            Comparisons were conducted against <strong>WinDirStat v2.6.2</strong>, <strong>WizTree v4.31</strong>, and <strong>QDirStat v2.0.01</strong> under controlled testing conditions with primed system caches, on their respective systems. eDirStat is an independent open-source utility and is not associated with, sponsored by, or endorsed by the trademark holders of those projects. Performance measurements depend heavily on hardware setup, filesystem fragmentation, operating system scheduling, and disk caching behavior; individual test results may vary.
+        </div>
+    </section>
+
+    <!-- Drag Races Section -->
+    <section id="drag-races" class="section">
+        <div class="section-header">
+            <h2 class="section-title">Performance Drag Races</h2>
+            <p class="section-subtitle">Watch eDirStat go head-to-head against WinDirStat, WizTree, and other tools in real-time speed comparisons.</p>
+        </div>
+        
+        <div class="drag-races-container">
+            <!-- Card 1: WinDirStat vs eDirStat -->
+            <div class="drag-race-card glass-card">
+                <div class="video-wrapper">
+                    <iframe src="https://www.youtube-nocookie.com/embed/T7fUh01_jG8" title="WinDirStat vs eDirStat: Drag Race" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy" id="video-windirstat"></iframe>
+                </div>
+                <div class="drag-race-info">
+                    <h3 class="drag-race-title">WinDirStat vs eDirStat</h3>
+                    <p class="drag-race-desc">A side-by-side speed comparison scanning a large directory structure. Watch how eDirStat's multithreaded directory walker completes the scan in seconds, while WinDirStat lags behind due to single-threaded layout traversal and locking issues.</p>
+                </div>
+            </div>
+            
+            <!-- Card 2: WizTree vs eDirStat -->
+            <div class="drag-race-card glass-card">
+                <div class="video-wrapper">
+                    <iframe src="https://www.youtube-nocookie.com/embed/pxyJk6ipjNk" title="WizTree vs eDirStat: Drag Race" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy" id="video-wiztree"></iframe>
+                </div>
+                <div class="drag-race-info">
+                    <h3 class="drag-race-title">WizTree vs eDirStat</h3>
+                    <p class="drag-race-desc">Comparing raw traversal speed on local SSD storage. eDirStat utilizes advanced work-stealing scheduling to saturate all CPU cores, executing a near-instant walk that matches or exceeds disk-level direct scanners.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Key Features Section -->
+    <section id="features" class="section">
+        <div class="section-header">
+            <h2 class="section-title">Architected for Extreme Performance</h2>
+            <p class="section-subtitle">Every stage of eDirStat is optimized to eliminate bottlenecks and fully exploit modern hardware.</p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card glass-card">
+                <div class="feature-icon-wrapper purple-glow">
+                    <i data-lucide="cpu"></i>
+                </div>
+                <h3 class="feature-title">Work-Stealing Walker</h3>
+                <p class="feature-description">
+                    Powered by a lock-free queue that saturates all available CPU cores. Idle threads steal directory branches to guarantee zero idle core overhead.
+                </p>
+            </div>
+
+            <div class="feature-card glass-card">
+                <div class="feature-icon-wrapper blue-glow">
+                    <i data-lucide="zap"></i>
+                </div>
+                <h3 class="feature-title">NTFS MFT Scanner</h3>
+                <p class="feature-description">
+                    Directly accesses raw Windows NTFS handles to parse the Master File Table. Bypasses the OS filesystem abstraction layers for near-instant scanning.
+                </p>
+            </div>
+
+            <div class="feature-card glass-card">
+                <div class="feature-icon-wrapper cyan-glow">
+                    <i data-lucide="shield"></i>
+                </div>
+                <h3 class="feature-title">7-Stage Deduplication</h3>
+                <p class="feature-description">
+                    Deduplicates byte-for-byte identical files with minimal disk reads. Filters via size, hashes (prefix, midpoint, suffix), and validates in real-time.
+                </p>
+            </div>
+
+            <div class="feature-card glass-card">
+                <div class="feature-icon-wrapper violet-glow">
+                    <i data-lucide="database"></i>
+                </div>
+                <h3 class="feature-title">Compressed Snapshots</h3>
+                <p class="feature-description">
+                    Serializes directory state to a Zstd-compressed flat binary (`.edst` files). Once loaded and decompressed, casts directly via `bytemuck` to eliminate all parsing overhead.
+                </p>
+            </div>
+
+            <div class="feature-card glass-card">
+                <div class="feature-icon-wrapper indigo-glow">
+                    <i data-lucide="eye"></i>
+                </div>
+                <h3 class="feature-title">Dynamic Visualizations</h3>
+                <p class="feature-description">
+                    Cycles between layout modes, including interactive treemaps, directory composition charts, duplicate file composition, and timelines.
+                </p>
+            </div>
+
+            <div class="feature-card glass-card">
+                <div class="feature-icon-wrapper green-glow">
+                    <i data-lucide="trash-2"></i>
+                </div>
+                <h3 class="feature-title">Bulk Operations</h3>
+                <p class="feature-description">
+                    Select multiple nodes at once in the directory trees or the deduplicator to execute batch trashing, permanent deletions, or folder link creation.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Installation & Usage Guide -->
+    <section id="guide" class="section">
+        <div class="section-header">
+            <h2 class="section-title">Getting Started</h2>
+            <p class="section-subtitle">Set up, compile from source, or run eDirStat directly on your operating system.</p>
+        </div>
+        
+        <div class="guide-container glass-card">
+            <div class="guide-tabs">
+                <button class="guide-tab active" data-target="guide-run">
+                    <span>Running eDirStat</span>
+                </button>
+                <button class="guide-tab" data-target="guide-build">
+                    <span>Build from Source</span>
+                </button>
+            </div>
+            <div class="guide-content-wrapper">
+                <div class="guide-pane active" id="guide-run">
+                    <p class="guide-text">Run the graphical user interface from your terminal. You can pass a directory path as a positional argument to start scanning immediately:</p>
+                    <pre><code class="language-bash"># Run GUI with default setup
+./edirstat
+
+# Run GUI and immediately scan a directory
+./edirstat /path/to/scan</code></pre>
+                    <div class="tip-box">
+                        <i data-lucide="zap" class="tip-icon"></i>
+                        <div>
+                            <strong>Windows Tip:</strong> You can just double-click the executable on Windows, but run eDirStat as an Administrator to unlock maximum performance.
+                        </div>
+                    </div>
+                </div>
+                <div class="guide-pane" id="guide-build">
+                    <p class="guide-text">To compile eDirStat from source, make sure you have the Rust compiler and cargo nightly toolchain installed:</p>
+                    <pre><code class="language-bash"># Clone the repository
+git clone https://github.com/xangelix/edirstat.git
+cd edirstat
+
+# Compile optimized release binary
+cargo build --release</code></pre>
+                    <div class="tip-box">
+                        <i data-lucide="shield" class="tip-icon"></i>
+                        <div>
+                            <strong>Platform Support:</strong> Fully supported on Linux, macOS, and Windows (requires nightly toolchain on Windows for `windows_by_handle`).
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Latest Releases & Devlogs (SEO & Discovery) -->
+    <section id="devlogs" class="section">
+        <div class="section-header">
+            <div class="version-badge" style="margin-bottom: 12px;">
+                <span class="badge-dot"></span>
+                <span>Engineering Blog &amp; Releases</span>
+            </div>
+            <h2 class="section-title">Latest Releases &amp; Devlogs</h2>
+            <p class="section-subtitle">Deep dives into architecture, multi-threaded disk traversal algorithms, and release notes.</p>
+        </div>
+        
+        <div class="blog-container">
+            <div class="blog-grid">
+                {% set blog = get_section(path="blog/_index.md") %}
+                {% for page in blog.pages %}
+                {% if loop.index <= 3 %}
+                <article class="blog-card glass-card">
+                    {% if page.extra.image %}
+                    <div class="blog-card-media">
+                        <a href="{{ page.permalink | safe }}" tabindex="-1" aria-hidden="true">
+                            <img src="{{ get_url(path=page.extra.image) | safe }}" alt="{{ page.extra.image_alt | default(value=page.title) }}" class="blog-card-img" loading="lazy">
+                        </a>
+                    </div>
+                    {% endif %}
+                    <div class="blog-card-meta">
+                        <span class="blog-badge">{{ page.extra.badge | default(value="Release") }} {{ page.extra.version | default(value="") }}</span>
+                        <time class="blog-date" datetime="{{ page.date }}">{{ page.date | date(format="%B %d, %Y") }}</time>
+                        <span class="blog-reading-time">{{ page.reading_time }} min read</span>
+                    </div>
+
+                    <h3 class="blog-card-title">
+                        <a href="{{ page.permalink | safe }}">{{ page.title }}</a>
+                    </h3>
+
+                    <p class="blog-card-desc">
+                        {{ page.description | truncate(length=180) }}
+                    </p>
+
+                    <div class="blog-card-footer">
+                        <a href="{{ page.permalink | safe }}" class="blog-read-link">
+                            <span>Read Release Notes</span>
+                            <i data-lucide="arrow-right"></i>
+                        </a>
+                    </div>
+                </article>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <div style="text-align: center; margin-top: 40px;">
+                <a href="/blog/" class="btn btn-secondary btn-lg">
+                    <span>View All Devlogs &amp; Releases</span>
+                    <i data-lucide="arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="section faq-section">
+        <div class="section-header">
+            <h2 class="section-title">Frequently Asked Questions</h2>
+            <p class="section-subtitle">Everything you need to know about eDirStat licenses, security sandboxing, performance, and platform support.</p>
+        </div>
+
+        <div class="faq-container">
+            <details class="faq-item glass-card" open>
+                <summary class="faq-question">
+                    <span>What is the difference between the Mac App Store and itch.io editions? Can I switch between them?</span>
+                    <i data-lucide="chevron-down" class="faq-chevron"></i>
+                </summary>
+                <div class="faq-answer">
+                    <p>The Mac App Store version runs inside Apple's mandatory App Sandbox, meaning it can only scan files and folders you explicitly grant it access to through the system file dialog — the itch.io version is not sandboxed and can scan any path directly. The App Store version is individually reviewed and approved by Apple and receives automatic updates through the App Store, while the itch.io version is Apple-notarized but distributed directly.</p>
+                    <p style="margin-top: 12px;">If you purchased the Mac App Store version and need the unrestricted build, email <button type="button" class="support-email-btn" data-contact="c3VwcG9ydEBlZGlyc3RhdC5jb20=" data-subject="TWFjIEFwcCBTdG9yZSBMaWNlbnNlIFZlcmlmaWNhdGlvbg==" title="Click to copy email &amp; open mail app"><span class="email-text">support [at] edirstat.com</span><span class="email-copy-badge"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy</span></button> with your receipt and we'll provide the itch.io version at no additional cost — unfortunately, the reverse is not possible, as we cannot issue Mac App Store copies to itch.io customers at this time.</p>
+                </div>
+            </details>
+
+            <details class="faq-item glass-card">
+                <summary class="faq-question">
+                    <span>Does eDirStat collect any telemetry, analytics, or crash reports?</span>
+                    <i data-lucide="chevron-down" class="faq-chevron"></i>
+                </summary>
+                <div class="faq-answer">
+                    <p><strong>No.</strong> eDirStat is 100% offline, privacy-first software with zero telemetry, zero analytics, zero network beacons, and zero crash reporting SDKs. The Mac App Store binary is compiled without any network entitlements, making network access physically impossible at the OS kernel level. Your filesystem hierarchy, folder names, and drive contents remain strictly private on your computer.</p>
+                </div>
+            </details>
+
+            <details class="faq-item glass-card">
+                <summary class="faq-question">
+                    <span>How is eDirStat so much faster than WinDirStat, WizTree, and QDirStat?</span>
+                    <i data-lucide="chevron-down" class="faq-chevron"></i>
+                </summary>
+                <div class="faq-answer">
+                    <p>eDirStat is engineered in safe, parallel Rust using a lock-free, work-stealing thread pool and zero-copy columnar arena allocations. On Windows NTFS drives, it queries the Master File Table (MFT) directly, bypassing standard Win32 recursive APIs. On macOS and Linux, it uses high-concurrency <code>readdir</code> batches optimized to saturate NVMe queue depths and modern SSD controllers.</p>
+                </div>
+            </details>
+
+            <details class="faq-item glass-card">
+                <summary class="faq-question">
+                    <span>How does the 7-Stage Duplicate Hunter work? Will it delete my files without permission?</span>
+                    <i data-lucide="chevron-down" class="faq-chevron"></i>
+                </summary>
+                <div class="faq-answer">
+                    <p><strong>Never.</strong> eDirStat never modifies or deletes any file without your explicit manual review and confirmation. The Duplicate Hunter identifies identical files using a 7-stage cryptographic pipeline: file size matching, prefix hashing, suffix hashing, sparse sampling, full Blake3 cryptographic verification, safety locks, and journal metadata confirmation. You can review all duplicate clusters in an interactive table and safely reclaim space using either hardlinks or permanent deletion.</p>
+                </div>
+            </details>
+
+            <details class="faq-item glass-card">
+                <summary class="faq-question">
+                    <span>What are the supported platforms and system requirements?</span>
+                    <i data-lucide="chevron-down" class="faq-chevron"></i>
+                </summary>
+                <div class="faq-answer">
+                    <p>eDirStat runs natively across all major platforms:</p>
+                    <ul class="faq-list">
+                        <li><strong>macOS:</strong> Universal binary (native Apple Silicon M1/M2/M3/M4 &amp; Intel x86_64) on macOS 12.0 (Monterey) and higher. Available on the Mac App Store and itch.io.</li>
+                        <li><strong>Windows:</strong> 64-bit Windows 10 &amp; 11 with direct NTFS MFT acceleration. Available on itch.io.</li>
+                        <li><strong>Linux:</strong> Standalone binaries, AppImage, deb, and rpm packages supporting ext4, btrfs, xfs, and ZFS.</li>
+                        <li><strong>Web Viewer:</strong> In addition to desktop binaries, our Web Viewer lets you inspect and query exported <code>.edst</code> disk snapshot files directly in your browser with zero installation.</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="faq-item glass-card">
+                <summary class="faq-question">
+                    <span>Can eDirStat scan external hard drives, USB drives, and network shares?</span>
+                    <i data-lucide="chevron-down" class="faq-chevron"></i>
+                </summary>
+                <div class="faq-answer">
+                    <p><strong>Yes.</strong> You can scan external hard drives, SSDs, USB flash drives, and mounted SMB/NFS network shares. On macOS, simply drag and drop any mounted volume or folder into eDirStat to grant security-scoped access immediately.</p>
+                </div>
+            </details>
+
+            <details class="faq-item glass-card">
+                <summary class="faq-question">
+                    <span>How do I get support, report bugs, or claim an itch.io key?</span>
+                    <i data-lucide="chevron-down" class="faq-chevron"></i>
+                </summary>
+                <div class="faq-answer">
+                    <p>For general bug reports, feature requests, and community discussions, please visit our open-source <a href="{{ config.extra.github_url }}/issues" target="_blank" rel="noopener noreferrer">GitHub Issues</a> page.</p>
+                    <p style="margin-top: 12px;">For private purchase inquiries, receipt verification, or claiming your complimentary unrestricted itch.io build after purchasing on the Mac App Store, email <button type="button" class="support-email-btn" data-contact="c3VwcG9ydEBlZGlyc3RhdC5jb20=" data-subject="U3VwcG9ydCBJbnF1aXJ5" title="Click to copy email &amp; open mail app"><span class="email-text">support [at] edirstat.com</span><span class="email-copy-badge"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy</span></button>.</p>
+                </div>
+            </details>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="cta-glow"></div>
+        <div class="cta-grid">
+            <!-- Card 1: Download -->
+            <div class="cta-card glass-card">
+                <h2 class="cta-title">Ready to Scan?</h2>
+                <p class="cta-subtitle">Download on the Mac App Store or get official cross-platform binaries directly on itch.io.</p>
+                <div class="cta-buttons-group">
+                    <a href="{{ config.extra.mac_app_store_url }}" target="_blank" rel="noopener noreferrer" class="app-store-badge-btn" aria-label="Download eDirStat on the Mac App Store">
+                        <img src="{{ get_url(path="assets/app-store-badge.svg") | safe }}" alt="Download on the Mac App Store" class="app-store-badge-img" width="156" height="40">
+                    </a>
+                    <a href="{{ config.extra.itch_io_url }}" target="_blank" rel="noopener noreferrer" class="app-store-badge-btn" aria-label="Download eDirStat on itch.io">
+                        <img src="{{ get_url(path="assets/itch-badge.svg") | safe }}" alt="Download on itch.io" class="app-store-badge-img" width="156" height="40">
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Card 2: Contribute -->
+            <div class="cta-card glass-card">
+                <h2 class="cta-title">Want to Contribute?</h2>
+                <p class="cta-subtitle">eDirStat is fully open-source. Report issues, request features, or submit pull requests on GitHub.</p>
+                <a href="{{ config.extra.github_url }}" target="_blank" class="btn btn-secondary btn-lg">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path><path d="M9 18c-4.51 2-5-2-7-2"></path></svg>
+                    <span>Visit GitHub Repository</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-container">
+        <div class="footer-left">
+            <div class="logo">
+                <img src="{{ get_url(path="assets/logo-nosubtext-transparent.svg") | safe }}" alt="eDirStat Logo" class="logo-img" width="160" height="40">
+            </div>
+            <p class="footer-desc">Fast, modern disk usage analyzer built in safe, native Rust.</p>
+        </div>
+        <div class="footer-right">
+            <div class="footer-links">
+                <a href="/#faq" class="footer-link">FAQ &amp; Support</a>
+                <a href="/blog/" class="footer-link">Blog &amp; Devlog</a>
+                <a href="{{ config.extra.mac_app_store_url }}" target="_blank" class="footer-link">
+                    <i data-lucide="apple"></i> Mac App Store
+                </a>
+                <a href="{{ config.extra.itch_io_url }}" target="_blank" class="footer-link">
+                    <i data-lucide="download"></i> itch.io
+                </a>
+                <a href="{{ config.extra.github_url }}" target="_blank" class="footer-link">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path><path d="M9 18c-4.51 2-5-2-7-2"></path></svg> GitHub
+                </a>
+                <a href="{{ config.extra.github_url }}/blob/main/LICENSE" target="_blank" class="footer-link">
+                    Licensed under {{ config.extra.license }}
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p>&copy; 2026 eDirStat. Released under the MIT License.</p>
+        <p class="trademark-disclaimer" style="opacity: 0.5; font-size: 0.8rem; margin-top: 8px;">WinDirStat, WizTree, and QDirStat are trademarks of their respective owners. eDirStat is an independent open-source project and is not affiliated with, sponsored by, or endorsed by the trademark holders.</p>
+    </div>
+</footer>
+{% endblock content %}
