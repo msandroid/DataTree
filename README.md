@@ -1,525 +1,220 @@
 # DataTree
 
-DataTree is a Windows-first disk usage analyzer based on [eDirStat](https://github.com/Xangelix/edirstat) (MIT). The on-screen product name is **DataTree**; crate names stay `edirstat*` so upstream changes are easy to merge.
+![DataTree treemap](docs/screenshots/treemap-b-logo.png)
 
-- **NTFS `$MFT` scanning needs Administrator privileges.** Without elevation, DataTree falls back to a parallel directory walk and shows `Walk` in the status bar (`MFT` when the Master File Table path is used).
-- **Unsigned Windows builds** may trigger SmartScreen. That is expected for a local/unsigned `datatree.exe`.
-- Snapshots written by DataTree are **v4** (logical size plus allocated). Older v2/v3 `.edst` files still load; v3 copies size into allocated.
-- Scan speed is not guaranteed to beat WizTree. Use `--bench-ui` to measure scan, treemap layout, and time-to-interactive on your machine.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+**DataTree** is a Windows-first disk usage analyzer built on the [eDirStat](https://github.com/Xangelix/edirstat) engine (MIT). It adds everyday disk-hygiene workflows inspired by tools like WizTree and WinDirStat: **Allocated** size, a sortable **File View**, **CSV export**, and size-aware search—while keeping eDirStat's fast NTFS `$MFT` path, treemap, plots, deduplicator, and compressed snapshots.
+
+The product name is **DataTree**. Internal crate names remain `edirstat*` so upstream engine changes are easier to merge.
+
+> DataTree is an independent project. It is not affiliated with, sponsored by, or endorsed by WizTree, WinDirStat, or eDirStat's commercial distribution.
+
+---
+
+## Highlights
+
+- **Tree View & File View** — Browse the directory tree or a virtualized list of every file sorted by allocated size.
+- **Size & Allocated** — Logical file size and on-disk cluster allocation in the table, treemap (allocated by default), and details panel.
+- **NTFS `$MFT` scanning** — Direct Master File Table reads on elevated Windows NTFS volumes; falls back to a parallel walk when MFT is unavailable.
+- **Search operators** — Filter by name, glob (`*.iso`), and size (`<100m`, `a>=1g`) in the filter bar.
+- **CSV export** — Export Tree View or File View from the GUI or CLI (`--export`, `--files-only`).
+- **UI timing bench** — `--bench-ui` prints JSON with `scan_ms`, `layout_ms`, and `time_to_interactive_ms`.
+- **Everything else from eDirStat** — Interactive treemap, extension stats, plots, BLAKE3 deduplicator, `.edst` snapshots, 18-language UI, themes, and hardlink-aware duplicate handling.
+
+---
+
+## Screenshots
+
+![Main interface — directory tree and treemap](docs/screenshots/main_interface.png)
+
+| Plots & analysis | Deduplicator |
+|---|---|
+| ![File size distribution](docs/screenshots/file_size_distribution.png) | ![Deduplicator](docs/screenshots/deduplicator.png) |
+
+---
+
+## Windows notes
+
+| Topic | Detail |
+|---|---|
+| **Administrator** | NTFS `$MFT` scanning requires elevation. Without it, DataTree uses a parallel directory walk. The status bar shows `Engine: MFT` or `Engine: Walk`. |
+| **Toolchain** | Windows builds need the **nightly** Rust toolchain (`windows_by_handle`). See `rust-toolchain.toml`. |
+| **SmartScreen** | Local unsigned `datatree.exe` builds may trigger SmartScreen. That is expected until you sign the binary. |
+| **Speed** | Scan speed is **not** guaranteed to beat WizTree or other tools. Use `--bench-ui` on your own machine instead of relying on third-party comparison tables. |
+
+---
+
+## Quick start
+
+### Build
 
 ```powershell
-# Nightly is required on Windows (`windows_by_handle`).
-cargo build --release -p edirstat
-.\target\release\datatree.exe
+git clone https://github.com/msandroid/DataTree.git
+cd DataTree
 
-# Headless CSV (Tree View by default; add --files-only for File View)
+# Nightly is required on Windows.
+cargo build --release -p edirstat
+```
+
+Binaries:
+
+- `target\release\datatree.exe` — primary GUI / CLI entry point
+- `target\release\edirstat.exe` — same binary (compatibility alias)
+
+### Run the GUI
+
+```powershell
+.\target\release\datatree.exe
+.\target\release\datatree.exe C:\Users\You\Downloads
+```
+
+### Headless CLI
+
+```powershell
+# Scan timing report
+.\target\release\datatree.exe C:\ --benchmark
+
+# UI path timing (2 warmup + 3 measured passes, JSON on stdout)
+.\target\release\datatree.exe C:\ --bench-ui
+
+# CSV export (Tree View: directories + files)
 .\target\release\datatree.exe C:\ --export report.csv
 
-# UI timing JSON: 2 warmup passes + 3 measured (averages)
-.\target\release\datatree.exe C:\ --bench-ui
+# CSV export (File View: files only)
+.\target\release\datatree.exe C:\ --export files.csv --files-only
+
+# Save a compressed snapshot
+.\target\release\datatree.exe C:\ --to snapshot
 ```
 
-`--bench-ui` prints one JSON object with `scan_ms`, `layout_ms`, and `time_to_interactive_ms` (`scan_ms + layout_ms` in this headless path). Run it twice if you want to separate a cold cache from a warm cache. Do not treat those numbers as a published WizTree comparison.
+`--bench-ui` emits one JSON line, for example:
 
-Portable binary: `target\release\datatree.exe`. The Inno Setup script (`installer.iss`) produces `datatree-setup-x86_64`.
-
-The original eDirStat documentation follows.
-
-# eDirStat
-
-![eDirStat Treemap](docs/screenshots/treemap-b-logo.png)
-
-[![Crates.io](https://img.shields.io/crates/v/edirstat)](https://crates.io/crates/edirstat)
-[![Docs.rs](https://docs.rs/edirstat/badge.svg)](https://docs.rs/edirstat)
-[![License](https://img.shields.io/crates/l/edirstat)](https://spdx.org/licenses/MIT)
-
-[**eDirStat**](https://edirstat.com) is a modern, high-performance, cross-platform disk usage analyzer written in Rust. Inspired by legacy utilities like [WinDirStat](https://windirstat.net/), it leverages an immediate-mode graphical interface [`egui`](https://egui.rs/) to provide a real-time, interactive treemap visualization of your filesystem.
-
-Unlike traditional analyzers that crawl sequentially, **eDirStat** is engineered from the ground up for modern multi-core systems. It couples a highly optimized, work-stealing multithreaded directory walker with a zero-copy arena data structure. This allows you to scan millions of files, locate space-wasting files using a treemap diagram (among other plots), identify duplicate files, and save or load system snapshots in milliseconds.
-
-[**Up to 2.8x speedup** vs `WinDirStat`](#vs-windirstat-v262)
-
-[**Up to 2.5x speedup** vs `WizTree`](#vs-wiztree-v431)
-
-[**Up to 9.6x speedup** vs `QDirStat`](#vs-qdirstat-v2001)
-
-## 📦 Distribution Model & Project Support
-
-eDirStat is, and will always remain, entirely open-source and free. However, if you'd like to support continuous development, engineering, and maintenance costs, **official pre-compiled binaries for Windows, macOS, and Linux are distributed exclusively as a paid download via [Itch.io - xangelix.itch.io/edirstat](https://xangelix.itch.io/edirstat)**.
-
-- **100% Open Source:** The complete codebase is free of charge and publicly available under the permissive **MIT License**. If you prefer to build the tool yourself, you are welcome to compile the source code on Windows, Linux, or macOS at no cost. Instructions are provided below.
-- **Package Managers:** Package managers and their repository maintainers are welcome to bundle and distribute eDirStat through their respective channels at no cost, provided that it is distributed un-paid, "unofficial", and under the MIT License.
-
-Purchasing precompiled packages directly funds the engineering efforts required to keep eDirStat fast, secure, and compatible with the latest operating systems.
-
-[![Prebuilt Binaries](https://img.shields.io/badge/prebuilt%20binaries-itch.io-ff5c5c)](https://xangelix.itch.io/edirstat)
-[![AUR version](https://img.shields.io/aur/version/edirstat?color=blue)](https://aur.archlinux.org/packages/edirstat)
-
----
-
-## 📽️ Demo Video
-
-<https://github.com/user-attachments/assets/22075865-c258-4cee-bae4-247a48702f25>
-
----
-
-## 📸 Screenshots
-
-![eDirStat Main Interface - Directory Tree and Interactive Treemap](docs/screenshots/main_interface.png)
-
-![eDirStat Deduplicator - Deduplication File Scan](docs/screenshots/deduplicator.png)
-
-![eDirStat Plots - File Size Distribution](docs/screenshots/file_size_distribution.png)
-
-![eDirStat Plots - File Age vs File Size](docs/screenshots/file_age_vs_file_size.png)
-
-![eDirStat Plots - Directory Composition](docs/screenshots/directory_composition.png)
-
-![eDirStat Plots - File Sizes by Extension](docs/screenshots/file_sizes_by_extension.jpg)
-
-![eDirStat Plots - Linked Temporal Timelines](docs/screenshots/linked_temporal_timelines.jpg)
-
-![eDirStat Plots - Duplicate Waste by Extension](docs/screenshots/duplicate_waste_by_extension.png)
-
----
-
-## 🚀 Key Features
-
-- ⚡ **Work-Stealing Multi-threading:** Powered by a lock-free task injector queue that keeps all CPU cores saturated during scanning-- inspired by `ripgrep`.
-- 🪟 **NTFS MFT Scanner (Windows & Linux):** Accesses raw NTFS volumes to parse the Master File Table directly, bypassing OS filesystem bottlenecks for near-instantaneous drive indexing (requires administrative/root privileges). Exported `$MFT` files can also be parsed offline on any platform.
-- 👥 **7-Stage Deduplication Engine:** Safely identifies byte-for-byte identical files using cryptographically secure BLAKE3 hashing. It is hardlink-aware to protect shared filesystem links and automatically filters out dataless cloud placeholders, special devices, and restricted entries.
-- 🌍 **Full Localization:** Community-translated interface in 18 languages (English, Arabic, Bengali, Chinese (Simplified), Chinese (Traditional), Dutch, French, German, Hindi, Italian, Japanese, Korean, Polish, Portuguese, Russian, Spanish, Turkish, and Vietnamese) with automatic system language detection and dedicated Google Noto font subsets.
-- 🎨 **Theme System:** System (auto-detected), Dark, Light, and High Contrast themes.
-- ⏹️ **Scan Control:** Cancel in-progress scans at any time, and restrict scans to a single filesystem (`-x`).
-- 🌐 **Browser Snapshot Viewer:** Explore saved `.edst` snapshots in the browser via the wasm build on [edirstat.com](https://edirstat.com).
-- 📦 **Fast Compressed Snapshots:** Writes structured tree snapshots to disk with Zstd compression in a compact columnar layout (v3) that decodes in milliseconds; legacy v2 snapshots remain readable. Cross-compatible on all little-endian platforms.
-- 📊 **Dynamic Treemap Visualization:** Features a responsive layout canvas with smooth HSL gradient scaling based on file extensions, interactive subtree zoom navigation with directory breadcrumbs, and right-click folder focusing.
-- ☁️ **Cloud & Special File Badges:** Instantly identifies cloud placeholders (`☁` iCloud, OneDrive, Dropbox dataless files), symbolic links (`🔗`), Unix devices (`⚙` FIFOs, sockets, block/char devices), and permission restrictions (`🔒`) with localized tooltips across the tree, table, and details panels.
-- 🗁 **Native File Manager Reveal:** Highlight and select files natively in macOS Finder, Windows File Explorer, and Linux file managers, or launch terminal sessions directly at any folder.
-- 🗂️ **Layout Modes and Plots:** Choose between the different layout modes, both featuring data visualizations that can be cycled between.
-- 📋 **Bulk Operations & Multi-Select:** Select multiple rows in the directory tree or deduplicator to execute batch trashing, deletion, or linking.
-- 🛡️ **Safe & Native:** Built completely in safe, pure Rust with immediate-mode UI rendering and cross-platform support. macOS App Store releases run under Apple's App Sandbox with zero networking, zero telemetry, and 100% local processing.
-
----
-
-## 🔒 Privacy & Local-First Design
-
-`eDirStat` is engineered as a private, local-first utility:
-
-- **100% Local Filesystem Analysis:** Scans, metadata traversal, and analytics are performed entirely in local memory on your CPU. No file names, contents, paths, or disk metrics are ever uploaded to external servers.
-- **Zero Telemetry:** No analytics beacons, tracking cookies, advertising SDKs, or background crash reporters are included.
-- **App Sandbox Hardening:** The official macOS App Store release runs strictly within Apple's App Sandbox without network entitlements.
-- For complete legal details, see our [Privacy Policy](PRIVACY.md).
-
----
-
-## 🚀 Installation & Build
-
-### Prerequisites
-
-Ensure you have the Rust toolchain installed. See `rust-toolchain.toml` for the version currently required.
-
-### Build from Source
-
-```bash
-# Clone the repository
-git clone https://github.com/xangelix/edirstat.git
-cd edirstat
-
-# Build the release executable
-cargo build --release
+```json
+{"scan_ms":12.345,"layout_ms":0.456,"time_to_interactive_ms":12.801,"engine":"Walk","files":12034,"dirs":2103,"warmup":2,"measured":3}
 ```
 
-The compiled binary will be located at `target/release/edirstat`.
+Run it twice if you want to compare a cold cache against a warm cache. `time_to_interactive_ms` is `scan_ms + layout_ms` in this headless path.
 
-> **Note:** When building on **Windows** you must use the nightly compiler, as `edirstat` requires the nightly feature `windows_by_handle`. The GUI binary is `datatree.exe` (an `edirstat.exe` alias is also built).
+### Installer (optional)
+
+Build a release binary, then compile `installer.iss` with [Inno Setup](https://jrsoftware.org/isinfo.php):
+
+```powershell
+cargo build --release -p edirstat
+# Output: staging\datatree-setup-x86_64.exe
+```
 
 ---
 
-## 📖 Usage Guide
+## Using DataTree
 
-To run the GUI application from the command line:
+### Explorer tabs
 
-```bash
-./target/release/edirstat
-```
+- **Tree View** — Hierarchical table with columns for Name, %, Size, **Allocated**, item counts, and timestamps. Child folders default to sorting by allocated size descending.
+- **File View** — Flat, virtualized list of files only. Click a row to select it in the tree, expand parents, and sync the treemap.
 
-You can also pass a directory path as a positional argument to automatically launch and begin scanning that folder on startup:
+### Filter syntax
 
-```bash
-./target/release/edirstat /path/to/scan
-```
+With regex mode **off**, the filter bar accepts:
 
-### Command-Line Reference
+| Pattern | Meaning |
+|---|---|
+| `report` | Name contains `report` (case-insensitive by default) |
+| `*.iso` | Extension is `iso` |
+| `<100m` | Logical size under 100 MiB |
+| `>=1g` | Logical size at least 1 GiB |
+| `a>=1g` | Allocated size at least 1 GiB |
 
-```bash
-edirstat [path]                              # Scan a directory, or load a snapshot file
-edirstat /path --to mysnapshot               # Headless scan, saved to mysnapshot.edst.zst
-edirstat /path --to snap --no-compression    # Headless scan, uncompressed .edst output
-edirstat /path --benchmark                   # Headless traversal timing report
-edirstat /path -x                            # Restrict the scan to the same filesystem
-```
+Suffixes: `k`, `m`, `g`, `t` (1024-based). Combine tokens: `*.iso <100m backup`.
 
-### Navigating the User Interface
+### Treemap metric
 
-1. **Scan a Directory:**
-   Click the **📁 Scan Directory** button in the top menu bar (or press <kbd>Ctrl+O</kbd> / <kbd>⌘O</kbd>) to open the scan dialog, which lists detected drives and mount points for quick selection (or type a path directly). You can also drag and drop any directory directly onto the window. Scans can be cancelled at any time while running.
-2. **Explore the Tree:**
-   The left-hand panel displays a hierarchical directory explorer with informative file badges (`☁` cloud placeholder, `🔗` symlink, `⚙` special file, `🔒` permission denied). You can expand/collapse folders using the `[+]`/`[-]` toggles. Use the **🔍 Filter** input bar (<kbd>Ctrl+F</kbd> / <kbd>⌘F</kbd>) to narrow down the view to matching folders or files with case-sensitive and regular expression matching modes.
-3. **Interact with the Treemap:**
-   The central panel displays a visual representation of your disk space. Larger rectangles correspond to larger files or directories.
-   - **Hovering:** Move your cursor over a block to view its full path and size in a tooltip.
-   - **Clicking:** Click on a block to automatically select it in the directory tree on the left.
-   - **Zooming & Breadcrumbs:** Double-click or right-click any directory block (or choose **Focus in Treemap**) to zoom the treemap visualization into that subfolder. Use the interactive breadcrumb trail or the **⬆ Up** button above the treemap to navigate back up through the folder hierarchy.
-4. **Inspect File Extensions:**
-   The right panel displays a sorted list of file extensions detected during the scan, complete with color-coded markers.
-5. **Deduplicate Your Drive:**
-   Switch to the **👥 Deduplicator** tab to search for duplicate files on your scanned filesystem. Custom selection helpers allow you to automatically select duplicates while preserving the oldest, newest, or shortest-path file. Easily replace duplicate files with hardlinks or softlinks to reclaim disk space.
-6. **Context Actions:**
-   Right-click any item in the left-hand explorer or treemap to open a context menu:
-   - **Focus in Treemap:** Zooms the treemap visualization into the selected directory.
-   - **Open in File Manager:** Launches your operating system's default file browser (Explorer, Finder, or Files) and reveals/selects the highlighted item.
-   - **Open Terminal Here:** Launches your preferred terminal emulator navigated directly to the selected directory.
-   - **Copy Name:** Copies the name of the selected folder or file to the system clipboard.
-   - **Copy Path:** Copies the absolute path of the selected folder or file to the system clipboard.
-   - **Move to Trash:** Sends the selected items to your system's Recycle Bin / Trash.
-   - **Delete (Permanent):** Opens a safety dialog to permanently delete the target path from your disk.
-7. **Personalize the View:**
-   The **View** menu offers theme selection (System, Dark, Light, High Contrast), interface language (18 languages with automatic system detection), a configurable timestamp **Time Format**, and treemap border toggles. View preferences are saved automatically between sessions.
-8. **Keyboard Shortcuts:**
-   Quickly navigate, inspect, and manage files using native keyboard shortcuts (see the [complete table](#keyboard-shortcuts) below).
+**View → Treemap uses Allocated** toggles whether rectangles are sized by allocated or logical size. Allocated is the default.
 
-### Keyboard Shortcuts
+### CSV export
 
-| Action | Windows / Linux | macOS | Description |
-|---|:---:|:---:|---|
-| **New Scan…** | <kbd>Ctrl+O</kbd> | <kbd>⌘O</kbd> | Open the scan target selection dialog |
-| **Rescan** | <kbd>Ctrl+R</kbd> / <kbd>F5</kbd> | <kbd>⌘R</kbd> / <kbd>F5</kbd> | Refresh and re-scan the current root folder |
-| **Save Snapshot…** | <kbd>Ctrl+S</kbd> | <kbd>⌘S</kbd> | Export the active scan to a compressed `.edst.zst` snapshot |
-| **Search / Filter** | <kbd>Ctrl+F</kbd> | <kbd>⌘F</kbd> | Focus the directory tree filter bar |
-| **Dismiss / Clear** | <kbd>Esc</kbd> | <kbd>Esc</kbd> | Close active modal dialog or clear the search filter |
-| **Focus in Treemap** | <kbd>⏎ Enter</kbd> | <kbd>⏎ Enter</kbd> | Zoom the treemap view into the selected folder |
-| **Go Up One Level** | <kbd>Alt+↑</kbd> | <kbd>⌥↑</kbd> | Navigate up one directory level in the treemap |
-| **Reset Treemap Zoom** | <kbd>Esc</kbd> | <kbd>Esc</kbd> | Reset the treemap zoom back to the root directory |
-| **Toggle Left Panel** | <kbd>F9</kbd> | <kbd>F9</kbd> | Show / collapse the directory tree explorer panel |
-| **Toggle Right Panel** | <kbd>F11</kbd> | <kbd>F11</kbd> | Show / collapse the extension stats / details panel |
-| **Collapse All** | <kbd>Ctrl+Shift+C</kbd> | <kbd>⇧⌘C</kbd> | Collapse all expanded directory tree nodes |
-| **Move to Trash** | <kbd>Del</kbd> | <kbd>Del</kbd> | Send selected file or folder to the system Recycle Bin / Trash |
-| **Delete (Permanent)** | <kbd>Shift+Del</kbd> | <kbd>⇧ Del</kbd> | Permanently delete the selected item from disk |
-| **Copy File Name** | <kbd>Ctrl+C</kbd> | <kbd>⌘C</kbd> | Copy selected item's file name to clipboard |
-| **Copy Full Path** | <kbd>Ctrl+Alt+C</kbd> | <kbd>⌥⌘C</kbd> | Copy selected item's absolute path to clipboard |
-| **Close Scan** | <kbd>Ctrl+W</kbd> | <kbd>⌘W</kbd> | Close the active scan and return to the home screen |
-| **Quit** | <kbd>Ctrl+Q</kbd> | <kbd>⌘Q</kbd> | Exit eDirStat |
-| **About / Help** | <kbd>F1</kbd> | <kbd>F1</kbd> | Open the About dialog, license viewer, and Privacy Policy |
-
----
-
-## 💾 Saving & Loading Snapshots
-
-If you need to analyze a server or remote environment:
-
-1. `edirstat /path/to/my/dir --to mysnapshot`
-2. Transfer the `mysnapshot.edst` file to another machine.
-3. Launch `edirstat` and click **📖 Load Snapshot** to open and navigate the tree with full interactivity, requiring no active filesystem connection.
-
----
-
-## ⚙️ Architectural Design & Internals
-
-### 1. Parallel Work-Stealing Walker (`crates/edirstat/src/engine/traversal.rs`)
-
-The traversal engine avoids the performance bottlenecks of standard recursive single-threaded walkers. It utilizes `crossbeam-deque` for task scheduling inspired by `ripgrep`:
-
-- **Workers & Stealers:** Each parallel thread operates on a local thread-safe FIFO task queue. When a thread runs out of directories to scan, it attempts to steal tasks from a global injector or peer worker queues.
-- **Cycle Detection:** Avoids infinite directory loops (caused by recursive symbolic links) by checking filesystem identity descriptors (`dev`/`ino` on Unix, and `volume_serial_number`/`file_index` on Windows) against an inherited stack of ancestors.
-- **Cooperative Cancellation:** In-progress scans can be cancelled cleanly; workers poll a shared cancel token while scanning.
-- **Virtual Filesystem Guard:** Scans rooted at `/` automatically skip virtual and mounted system directories (such as `/proc`, `/sys`, and `/dev`).
-- **Device Boundary Restrictions:** Restricts the scan to the primary mount point or device boundary to prevent unintended traversal of system directories (e.g., `/sys` or `/proc`).
-
-### 2. Lock-Free Snapshot Commit Loop (`crates/edirstat/src/engine/coordinator.rs`)
-
-To prevent traversal worker threads from blocking the UI rendering cycle, `edirstat` decouples directory scanning from interface updates through an event-driven coordinator model:
-
-- **The Coordinator:** Worker threads stream compressed structural events (`ScanEvent`) over a lock-free channel to a dedicated background Coordinator thread.
-- **Dynamic ID Map:** The Coordinator translates worker-local task identifiers to global array indexes in $O(1)$ amortized time.
-- **Atomic Snapshot Publishing:** Instead of locking a mutable tree, the GUI accesses an immutable `FileArenaSnapshot` read-only copy via `arc_swap`. The Coordinator issues updated snapshots to the GUI every 100–1000 milliseconds during an active scan (tiered by tree size).
-
-### 3. Cache-Friendly Arena Representation (`crates/edirstat-core/src/arena.rs`)
-
-To conserve memory and avoid pointer-chasing latency, the directory tree is flattened into a single contiguous array (arena):
+**File → Export CSV** writes:
 
 ```text
-[ Root Node ] ---> [ Child A ] ---> [ Child B ] ---> [ Child C ]
-                        |
-                        v
-                 [ Sub-child 1 ]
+File Name,Size,Allocated,Modified,Files,Folders
 ```
 
-- **Index-Based References:** Individual `FileNode` blocks reference parent, child, and sibling nodes using raw `u32` indices rather than heap-allocated pointers (`Box` or `Rc`).
-- **Plain Old Data (POD):** The `FileNode` struct is annotated with `bytemuck::Pod` and `bytemuck::Zeroable`, strictly aligned to 8-byte boundaries.
-- **Compact String Pool:** Directory and file names are deduplicated and stored in a contiguous byte sequence (`StringPool`). Nodes reference these names via a lightweight `StringId` wrapper.
+Paths are written without the `\\?\` extended-length prefix. When File View is active, only files are exported (same as `--files-only` on the CLI).
 
-### 4. Zstd-Compressed Snapshot Persistence (`crates/edirstat-core/src/snapshot.rs`)
+### Snapshots
 
-The current (v3) `.edst` snapshot layout stores the arena as compact columnar data, optionally wrapped in a transparent Zstd container (`.edst.zst`):
+DataTree writes snapshot format **v4** (logical size + allocated). Older v2/v3 `.edst` files still load; v3 copies `size` into `allocated`.
 
-```text
-+-------------------------------------------------------------+
-|  Header (72 Bytes, Little-Endian)                           |
-|  - Magic: "EDST"                                            |
-|  - Version: u16 (v3; v2 legacy files still load)            |
-|  - Uncompressed Size: u64                                   |
-|  - Node Count: u64                                          |
-|  - String Pool Offset & Length                              |
-+-------------------------------------------------------------+
-|  Columnar Node Data (DFS pre-order)                         |
-|  - Control bytes (flags + timestamp shortcut bits)          |
-|  - Varint columns: name ids, sizes, zigzag timestamp deltas |
-|  - Varint file/child counts for directories                 |
-|  - String Pool (varint-framed packed UTF-8)                 |
-+-------------------------------------------------------------+
+```powershell
+.\target\release\datatree.exe C:\Projects --to projects
+# Creates projects.edst.zst (Zstd-compressed)
 ```
 
-- **Zstd Compression:** Minimizes the disk storage footprint of snapshot files while maintaining high read/write speeds; the container is detected and unwrapped transparently on load. `--no-compression` writes a raw `.edst` without the wrapper.
-- **Columnar Varint Encoding:** Nodes are serialized field-by-field as LEB128 varint columns with zigzag delta-compressed timestamps. The control bytes bit-pack dataless cloud flags (`FLAG_DATALESS`) and special file flags (`FLAG_SPECIAL`) in addition to directory and symlink states, making snapshots significantly smaller and richer to decode than the legacy flat-binary (v2) layout, which remains readable for backward compatibility.
-- **Cross-Platform Little-Endian:** All multi-byte fields are serialized little-endian, keeping snapshots portable across little-endian platforms.
-
-### 5. Multi-Stage Deduplication Engine (`crates/edirstat-gui/src/stats/deduplicator.rs`)
-
-<https://github.com/user-attachments/assets/a5743098-e88f-4fb7-bc0d-df073ed0615f>
-
-The deduplication module detects byte-for-byte identical files with minimal disk I/O. Candidate duplicate groups are identified and isolated through a 7-stage pipeline:
-
-1. **Size Partitioning:** Scanned files are grouped by identical byte counts. Special devices (FIFOs, sockets), dataless cloud placeholders, and permission-restricted files are automatically excluded, and singleton sizes are discarded immediately.
-2. **Prefix Hashing:** Worker threads read and hash the first 4KB of files to filter out non-matching formats.
-3. **Midpoint Hashing:** Computes a hash around the center of the remaining files to detect differences inside similar files.
-4. **Suffix Hashing:** Hashes the last 4KB of file data, which often contains unique trailing metadata.
-5. **Multi-Range Hashing:** Performs periodic block sampling (every 100MB) across large files to ensure long-distance uniformity without scanning entire gigabyte-scale structures.
-6. **Full Cryptographic Hashing:** Executes a full BLAKE3 cryptographic hash only over candidates that successfully cleared the previous five stages.
-7. **Real-time Validation:** Performs timestamp checking and `is_file()` validation on disk immediately before grouping and hashing to protect against modifying files changed since snapshot generation.
-
-The engine remains hardlink-aware, allowing it to accurately differentiate between physical duplicate copies and single-inode hardlinks, which consume no additional storage.
+Load snapshots from **File → Load Snapshot** in the GUI.
 
 ---
 
-## Benchmarks
-
-### Vs `WinDirStat` (v2.6.2)
-
-A dense Windows primary drive.
-
-`NVMe PCIe Gen3 [ntfs]`
-
-**Up to 2.8x speedup**
-
-video coming soon!
-
-### Vs `WizTree` (v4.31)
-
-A dense Windows primary drive.
-
-`NVMe PCIe Gen3 [ntfs]`
-
-**Up to 2.5x speedup**
-
-<https://github.com/user-attachments/assets/2190e1d1-51ac-4b5e-89e6-80dfd1d9c8de>
-
-### Vs `QDirStat` (v2.0.01)
-
-To evaluate traversal performance, `edirstat` includes a custom comparison benchmark target comparing it against `qdirstat-cache-writer` (the official headless command-line crawler shipped with `QDirStat` for background scanning).
-
-#### How It Works & Why It's Fair
-
-1. **End-to-End Subprocess Spawning:** Both tools are launched as independent external subprocesses (running the optimized release binary for `edirstat` and the `perl` script execution for `QDirStat`). This captures full end-to-end CLI execution time, including binary loading, runtime initialization (Perl interpreter boot vs. Rust startup), option parsing, and traversal startup.
-2. **Warm Cache Inode Priming:** The benchmark performs 2 warm-up runs for each target directory to prime the OS directory entry page caches. This eliminates disk I/O bottlenecks and isolates CPU/algorithm execution efficiency (multi-threaded, work-stealing Rust vs. single-threaded Perl).
-3. **Statistical Averaging:** Measurements are collected across 5 consecutive sample runs to compute a robust median and average traversal duration.
-
-#### Results
-
-Across a diverse suite of storage devices and directory layouts, **eDirStat** consistently exceeds the performance of `QDirStat` in duplicate, delivering up to a **9.6x speedup** (ranging from 6.0x to 9.6x) in scan time!
-
-Whether crawling highly nested code repositories on high-speed `NVMe` drives, game installations on SATA SSDs, or deep directory trees on enterprise HDDs, `edirstat`'s parallel, work-stealing multithreading model, allows it to remain the fastest disk usage analyzer available.
-
-Key Highlights:
-
-- Up to **9.60x faster** than the `QDirStat` backend writer, especially on SSDs.
-- Achieves a **6.04x speedup** on mechanical HDDs even when processing massive, deeply nested directory paths.
-- Smoothly scales directory traversal workload across all available CPU threads.
-
-#### System Details
-
-AMD Ryzen 9 9950X3D (32)
-
-Linux 6.18.34-1-cachyos-lts
-
-#### `/home/tux/Documents/git`
-
-`Samsung 990 Pro NVMe SSD (Gen 4) [btrfs]`
-
-Dense, an enormous amount of small files and directories.
+## Command-line reference
 
 ```text
-Running benches/compare.rs (target/release/deps/compare-95ade4249a41f004)
-==================================================
-          eDirStat vs QDirStat Benchmark
-==================================================
-Target Directory : /home/tux/Documents/git
-CPU Cores Available: 32
-==================================================
-Performing 2 warm-up runs...
-Performing 5 sample runs...
-Run 1/5... edirstat: 856.10ms, qdirstat: 6.70s
-Run 2/5... edirstat: 869.77ms, qdirstat: 7.11s
-Run 3/5... edirstat: 881.21ms, qdirstat: 6.89s
-Run 4/5... edirstat: 865.67ms, qdirstat: 6.91s
-Run 5/5... edirstat: 851.16ms, qdirstat: 7.31s
+datatree [PATH] [OPTIONS]
 
-================ RESULTS SUMMARY ================
-eDirStat (Rust, parallel):
-  Min   : 851.16ms
-  Max   : 881.21ms
-  Median: 865.67ms
-  Mean  : 864.78ms
-QDirStat (Perl writer):
-  Min   : 6.70s
-  Max   : 7.31s
-  Median: 6.91s
-  Mean  : 6.98s
-Speedup (QDirStat / eDirStat): 7.99x
-==================================================
+Arguments:
+  PATH    Directory to scan, or an .edst / .edst.zst snapshot to open in the GUI
+
+Options:
+  --benchmark          Headless scan timing report
+  --bench-ui           Scan + treemap layout timing as JSON (warmup 2, measured 3)
+  --export <FILE>      Export CSV and exit
+  --files-only         With --export: omit directories (File View)
+  --to <DEST>          Headless scan; save snapshot to DEST.edst.zst
+  --no-compression     With --to: write uncompressed DEST.edst
+  -x, --same-filesystem Restrict traversal to one filesystem / volume
+  -h, --help           Print help
 ```
-
-#### `/run/media/tux/F1/Games/PC/SteamLibrary/steamapps/common`
-
-`Samsung SSD 870 QVO 8TB [btrfs]`
-
-Game files, a mix of large and small files on a SATA SSD.
-
-```text
-Running benches/compare.rs (target/release/deps/compare-95ade4249a41f004)
-==================================================
-          eDirStat vs QDirStat Benchmark
-==================================================
-Target Directory : /run/media/tux/F1/Games/PC/SteamLibrary/steamapps/common
-CPU Cores Available: 32
-==================================================
-Performing 2 warm-up runs...
-Performing 5 sample runs...
-Run 1/5... edirstat: 471.00ms, qdirstat: 4.24s
-Run 2/5... edirstat: 478.63ms, qdirstat: 5.12s
-Run 3/5... edirstat: 467.80ms, qdirstat: 4.54s
-Run 4/5... edirstat: 475.84ms, qdirstat: 4.27s
-Run 5/5... edirstat: 451.38ms, qdirstat: 8.45s
-
-================ RESULTS SUMMARY ================
-eDirStat (Rust, parallel):
-  Min   : 451.38ms
-  Max   : 478.63ms
-  Median: 471.00ms
-  Mean  : 468.93ms
-QDirStat (Perl writer):
-  Min   : 4.24s
-  Max   : 8.45s
-  Median: 4.54s
-  Mean  : 5.32s
-Speedup (QDirStat / eDirStat): 9.64x
-==================================================
-```
-
-#### `/run/media/tux/D1`
-
-`Seagate Exos X18 18TB HDD [btrfs]`
-
-Large files, but fewer, on an HDD. Less directory nesting.
-
-```text
-Running benches/compare.rs (target/release/deps/compare-95ade4249a41f004)
-==================================================
-          eDirStat vs QDirStat Benchmark
-==================================================
-Target Directory : /run/media/tux/D1
-CPU Cores Available: 32
-==================================================
-Performing 2 warm-up runs...
-Performing 5 sample runs...
-Run 1/5... edirstat: 8.01ms, qdirstat: 33.43ms
-Run 2/5... edirstat: 5.34ms, qdirstat: 33.03ms
-Run 3/5... edirstat: 5.48ms, qdirstat: 32.67ms
-Run 4/5... edirstat: 4.59ms, qdirstat: 33.06ms
-Run 5/5... edirstat: 5.81ms, qdirstat: 33.49ms
-
-================ RESULTS SUMMARY ================
-eDirStat (Rust, parallel):
-  Min   : 4.59ms
-  Max   : 8.01ms
-  Median: 5.48ms
-  Mean  : 5.85ms
-QDirStat (Perl writer):
-  Min   : 32.67ms
-  Max   : 33.49ms
-  Median: 33.06ms
-  Mean  : 33.14ms
-Speedup (QDirStat / eDirStat): 6.03x
-==================================================
-```
-
-#### `/run/media/tux/B4`
-
-`Toshiba MG09SACA16EA 16TB HDD [btrfs]`
-
-An enormous amount of tiny files with deep directory nesting, on an HDD.
-
-```text
-Running benches/compare.rs (target/release/deps/compare-95ade4249a41f004)
-==================================================
-          eDirStat vs QDirStat Benchmark
-==================================================
-Target Directory : /run/media/tux/B4
-CPU Cores Available: 32
-==================================================
-Performing 2 warm-up runs...
-Performing 5 sample runs...
-Run 1/5... edirstat: 515.15ms, qdirstat: 3.54s
-Run 2/5... edirstat: 520.41ms, qdirstat: 3.51s
-Run 3/5... edirstat: 537.08ms, qdirstat: 3.50s
-Run 4/5... edirstat: 580.76ms, qdirstat: 4.24s
-Run 5/5... edirstat: 612.70ms, qdirstat: 4.05s
-
-================ RESULTS SUMMARY ================
-eDirStat (Rust, parallel):
-  Min   : 515.15ms
-  Max   : 612.70ms
-  Median: 537.08ms
-  Mean  : 553.22ms
-QDirStat (Perl writer):
-  Min   : 3.50s
-  Max   : 4.24s
-  Median: 3.54s
-  Mean  : 3.77s
-Speedup (QDirStat / eDirStat): 6.60x
-==================================================
-```
-
-> **Benchmark Disclaimer & Configuration:**
->
-> - Comparisons were conducted against **WinDirStat v2.6.2**, **WizTree v4.31**, and **QDirStat v2.0.01** under controlled testing conditions with primed system caches.
-> - eDirStat is an independent open-source utility and is not associated with, sponsored by, or endorsed by the trademark holders of those projects.
-> - Performance measurements depend heavily on hardware setup, filesystem fragmentation, operating system scheduling, and disk caching behavior; individual test results may vary.
 
 ---
 
-## 💖 Contributors
+## Keyboard shortcuts
 
-- **[@Lej77](https://github.com/Lej77)** — NTFS `$MFT` fixes and improvements, including Master File Table scanning of NTFS drives on Linux (#14) and MFT extension record support (#15).
-- **[@AlexanderSchuetz97](https://github.com/AlexanderSchuetz97)** — many feature requests, German translation review, and extensive bug testing.
-- **[@hollmmes](https://github.com/hollmmes)** — Turkish (`tr-TR`) localization support (#17).
+| Action | Windows / Linux | macOS |
+|---|---|---|
+| New scan | <kbd>Ctrl+O</kbd> | <kbd>⌘O</kbd> |
+| Rescan | <kbd>Ctrl+R</kbd> / <kbd>F5</kbd> | <kbd>⌘R</kbd> / <kbd>F5</kbd> |
+| Save snapshot | <kbd>Ctrl+S</kbd> | <kbd>⌘S</kbd> |
+| Search / filter | <kbd>Ctrl+F</kbd> | <kbd>⌘F</kbd> |
+| Focus in treemap | <kbd>Enter</kbd> | <kbd>Enter</kbd> |
+| Treemap up one level | <kbd>Alt+↑</kbd> | <kbd>⌥↑</kbd> |
+| Move to trash | <kbd>Del</kbd> | <kbd>Del</kbd> |
+| About | <kbd>F1</kbd> | <kbd>F1</kbd> |
 
 ---
 
-## 📝 License
+## Architecture (short)
 
-This project is licensed under the [MIT License](LICENSE).
+DataTree inherits eDirStat's design:
+
+1. **Parallel walker** — Work-stealing directory traversal (`crates/edirstat/src/engine/traversal.rs`).
+2. **NTFS MFT engine** — Raw `$MFT` parsing on Windows when elevated (`crates/edirstat/src/engine/mft.rs`).
+3. **Coordinator** — Workers stream `ScanEvent`s; the GUI reads immutable snapshots via `arc_swap`.
+4. **Arena** — Flat `FileNode` array with `size` and `allocated` (`crates/edirstat-core/src/arena.rs`).
+5. **Snapshots** — Columnar v4 `.edst` with optional Zstd wrapper (`crates/edirstat-core/src/snapshot.rs`).
 
 ---
 
-_Disclaimer: `WinDirStat`, `WizTree`, and `QDirStat` are trademarks of their respective owners. eDirStat is an independent open-source project and is not affiliated with, sponsored by, or endorsed by the trademark holders._
+## Privacy
+
+All analysis runs locally. No telemetry, analytics, or cloud upload of paths or file contents. See [PRIVACY.md](PRIVACY.md).
+
+---
+
+## Upstream & license
+
+- **Upstream engine:** [Xangelix/edirstat](https://github.com/Xangelix/edirstat) (MIT). Set `upstream` remote to track it: `git remote add upstream https://github.com/Xangelix/edirstat.git`
+- **DataTree** is licensed under the [MIT License](LICENSE). Original eDirStat copyright notices remain in `LICENSE`.
+- **Trademarks:** WizTree, WinDirStat, and QDirStat are trademarks of their respective owners.
+
+### Contributors (engine)
+
+Credit for the underlying eDirStat project and its contributors remains with the upstream repository. DataTree-specific changes are maintained in this fork.
