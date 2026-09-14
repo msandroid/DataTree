@@ -1,0 +1,17 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "datatree",
+  "version": "2.2.0",
+  "displayName": "DataTree",
+  "description": "Local disk usage analysis for humans and AI agents. Scan folders, query size/allocated, search with *.iso and a>=1g, export CSV, and delete only after a two-step confirm.",
+  "author": {
+    "name": "msandroid",
+    "url": "https://github.com/msandroid"
+  },
+  "homepage": "https://github.com/msandroid/DataTree",
+  "repository": "https://github.com/msandroid/DataTree",
+  "license": "MIT",
+  "keywords": ["disk-usage", "mcp", "datatree", "ntfs", "cleanup"],
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json"
+}

@@ -56,13 +56,14 @@ git clone https://github.com/msandroid/DataTree.git
 cd DataTree
 
 # Nightly is required on Windows.
-cargo build --release -p edirstat
+cargo build --release -p edirstat -p edirstat-mcp
 ```
 
 Binaries:
 
-- `target\release\datatree.exe` — primary GUI / CLI entry point
-- `target\release\edirstat.exe` — same binary (compatibility alias)
+- `target\release\datatree.exe` — primary GUI / CLI entry point (`datatree mcp` launches the MCP helper)
+- `target\release\edirstat.exe` — same GUI binary (compatibility alias)
+- `target\release\datatree-mcp.exe` — MCP server and JSON CLI for AI agents
 
 ### Run the GUI
 
@@ -103,8 +104,8 @@ Run it twice if you want to compare a cold cache against a warm cache. `time_to_
 Build a release binary, then compile `installer.iss` with [Inno Setup](https://jrsoftware.org/isinfo.php):
 
 ```powershell
-cargo build --release -p edirstat
-# Output: staging\datatree-setup-x86_64.exe
+cargo build --release -p edirstat -p edirstat-mcp
+# Output: staging\datatree-setup-x86_64.exe (includes datatree.exe and datatree-mcp.exe)
 ```
 
 ---
@@ -157,6 +158,46 @@ Load snapshots from **File → Load Snapshot** in the GUI.
 
 ---
 
+## AI agents (MCP / plugins)
+
+DataTree exposes the same scan engine to AI agents over **stdio MCP** and a JSON CLI. The GUI is unchanged; agents query a snapshot instead of dumping the whole tree.
+
+```powershell
+# MCP (stdin/stdout). Cursor / Claude / Codex / Antigravity spawn this.
+.\target\release\datatree-mcp.exe mcp
+
+# Or, if datatree-mcp is next to the GUI binary:
+.\target\release\datatree.exe mcp
+
+# JSON CLI
+.\target\release\datatree-mcp.exe scan C:\Users --json
+.\target\release\datatree-mcp.exe search "a>=1g *.iso" --path C:\Users --json --limit 50
+.\target\release\datatree-mcp.exe top --path C:\Users --files --n 20 --json
+.\target\release\datatree-mcp.exe install --all
+```
+
+Write tools (`plan_delete` / `confirm_delete`) require a two-step confirm. Permanent delete also requires `DATATREE_ALLOW_PERMANENT_DELETE=1`.
+
+Plugin package: [`plugins/datatree`](plugins/datatree). Example client configs: [`examples/mcp`](examples/mcp). VS Code/Cursor extension: [`extensions/datatree`](extensions/datatree).
+
+The MCP server is local, but **paths and file names in tool results are sent to whatever AI host you use**. See [PRIVACY.md](PRIVACY.md).
+
+### Install for AI clients
+
+Put `datatree-mcp` on PATH (the Windows installer copies it next to `datatree.exe`), then either run `datatree-mcp install ...` or copy an example from [`examples/mcp`](examples/mcp).
+
+| Client | Command | Config written |
+|---|---|---|
+| Cursor | `datatree-mcp install --cursor` | `.cursor/mcp.json` (`--global` → `%USERPROFILE%\.cursor\mcp.json`) |
+| Claude Code | `datatree-mcp install --claude` | `.mcp.json` (`--global` → `~/.claude/mcp.json`). Marketplace: [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json) |
+| Codex | `datatree-mcp install --codex` | `~/.codex/config.toml` section `[mcp_servers.datatree]` |
+| Antigravity | `datatree-mcp install --antigravity` | `.agents/plugins/datatree/mcp_config.json` (`--global` → `~/.gemini/config/mcp_config.json`) |
+| All four | `datatree-mcp install --all` | The paths above |
+
+You can also copy [`plugins/datatree`](plugins/datatree) into each client's plugin directory. The VS Code/Cursor extension under [`extensions/datatree`](extensions/datatree) registers the same MCP server and adds **Scan Folder** / **Open in GUI** / **Show Last Summary**.
+
+---
+
 ## Command-line reference
 
 ```text
@@ -173,7 +214,21 @@ Options:
   --to <DEST>          Headless scan; save snapshot to DEST.edst.zst
   --no-compression     With --to: write uncompressed DEST.edst
   -x, --same-filesystem Restrict traversal to one filesystem / volume
+  mcp                  Launch datatree-mcp (MCP stdio) if it is installed
   -h, --help           Print help
+
+datatree-mcp [COMMAND]
+
+Commands:
+  mcp            MCP over stdin/stdout (default)
+  scan           JSON scan summary
+  search         Filter syntax: name, *.iso, <100m, a>=1g
+  children       Paginated directory listing
+  top            Largest files/dirs
+  volumes        Mounted disks
+  export         CSV export
+  plan-delete    Two-step delete plan (does not delete)
+  install        Write Cursor/Claude/Codex/Antigravity MCP config
 ```
 
 ---
@@ -202,12 +257,13 @@ DataTree inherits eDirStat's design:
 3. **Coordinator** — Workers stream `ScanEvent`s; the GUI reads immutable snapshots via `arc_swap`.
 4. **Arena** — Flat `FileNode` array with `size` and `allocated` (`crates/edirstat-core/src/arena.rs`).
 5. **Snapshots** — Columnar v4 `.edst` with optional Zstd wrapper (`crates/edirstat-core/src/snapshot.rs`).
+6. **Agent API** — `crates/edirstat-mcp` wraps the engine as stdio MCP + JSON CLI (`datatree-mcp`).
 
 ---
 
 ## Privacy
 
-All analysis runs locally. No telemetry, analytics, or cloud upload of paths or file contents. See [PRIVACY.md](PRIVACY.md).
+All GUI analysis runs locally. No telemetry, analytics, or cloud upload of paths or file contents from the desktop app. The optional **MCP / agent** tools are also local processes, but the AI host may send tool results (paths and names) to a remote model. See [PRIVACY.md](PRIVACY.md).
 
 ---
 

@@ -15,9 +15,9 @@ pub fn allocated_len(meta: &std::fs::Metadata) -> u64 {
 
     #[cfg(windows)]
     {
+        const CLUSTER: u64 = 4096;
         use std::os::windows::fs::MetadataExt as _;
         let size = meta.file_size();
-        const CLUSTER: u64 = 4096;
         if size == 0 {
             0
         } else {

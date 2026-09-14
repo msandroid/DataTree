@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "datatree": {
+      "type": "stdio",
+      "command": "datatree-mcp",
+      "args": ["mcp"]
+    }
+  }
+}

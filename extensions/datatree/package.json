@@ -1,0 +1,52 @@
+{
+  "name": "datatree",
+  "displayName": "DataTree",
+  "description": "Disk usage analysis for humans and AI agents. Registers the DataTree MCP server and commands to scan a folder, open the GUI, and show a summary.",
+  "version": "2.2.0",
+  "publisher": "msandroid",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.99.0"
+  },
+  "categories": ["Other"],
+  "keywords": ["disk-usage", "mcp", "datatree"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "DataTree",
+      "properties": {
+        "datatree.mcpPath": {
+          "type": "string",
+          "default": "datatree-mcp",
+          "description": "Path to the datatree-mcp executable (PATH name or absolute path)."
+        },
+        "datatree.guiPath": {
+          "type": "string",
+          "default": "datatree",
+          "description": "Path to the DataTree GUI executable (PATH name or absolute path)."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "datatree.scanFolder",
+        "title": "DataTree: Scan Folder"
+      },
+      {
+        "command": "datatree.openGui",
+        "title": "DataTree: Open in GUI"
+      },
+      {
+        "command": "datatree.showSummary",
+        "title": "DataTree: Show Last Summary"
+      }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "datatree",
+        "label": "DataTree"
+      }
+    ]
+  }
+}

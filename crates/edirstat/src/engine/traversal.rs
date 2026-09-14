@@ -15,7 +15,11 @@ use crossbeam::{
     deque::{Injector, Worker},
 };
 
-pub use edirstat_core::{file_id::get_file_id, state::TraversalStats, state::{SCAN_ENGINE_MFT, SCAN_ENGINE_WALK}};
+pub use edirstat_core::{
+    file_id::get_file_id,
+    state::TraversalStats,
+    state::{SCAN_ENGINE_MFT, SCAN_ENGINE_WALK},
+};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct LocalId(pub u32);

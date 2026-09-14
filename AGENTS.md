@@ -13,6 +13,10 @@
 - 主バイナリは `target/release/datatree.exe`（互換エイリアス `edirstat.exe`）
 - NTFS の MFT 直読みには管理者権限が必要。非管理者時は並列 walk にフォールバック（ステータスバーに `MFT` / `Walk`）
 - DataTree 追加機能: Allocated 列、File View、CSV エクスポート、サイズ検索演算子（`*.iso`、`<100m`、`a>=1g`）、`--bench-ui` JSON ベンチ、スナップショット v4
+- AI ブリッジ: `datatree-mcp`（stdio MCP + JSON CLI）。プラグインは `plugins/datatree`。VS Code 拡張は `extensions/datatree`
+- MCP ツール（ページング必須、全ツリー JSON 化はしない）: `list_volumes`, `scan`, `scan_status`, `cancel_scan`, `load_snapshot`, `save_snapshot`, `summary`, `path_info`, `children`, `search`, `top`, `extensions`, `export_csv`, `open_gui`, `plan_delete`, `confirm_delete`
+- 削除は必ず `plan_delete` → 人間確認 → `confirm_delete`（確認文字列 `TRASH` / `DELETE PERMANENTLY`）。完全削除は `DATATREE_ALLOW_PERMANENT_DELETE=1` のときだけ露出
+- GUI バイナリの `datatree mcp` は隣の `datatree-mcp` を起動する
 - README トップバナー: `assets/img/datatree-banner.png`
 - スポンサーシップバナー: `assets/img/sponsor-banner.svg` → https://github.com/sponsors/msandroid
 - `.github/FUNDING.yml` の GitHub Sponsors は `msandroid`

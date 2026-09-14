@@ -28,6 +28,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "target\release\datatree.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "target\release\edirstat.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "target\release\datatree-mcp.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
 [Icons]
 Name: "{group}\DataTree"; Filename: "{app}\datatree.exe"; IconFilename: "{app}\datatree.exe"

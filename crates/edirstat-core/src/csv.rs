@@ -17,10 +17,7 @@ pub fn export_csv(
 ) -> Result<(), crate::EdirstatError> {
     let file = File::create(path)?;
     let mut writer = BufWriter::new(file);
-    writeln!(
-        writer,
-        "File Name,Size,Allocated,Modified,Files,Folders"
-    )?;
+    writeln!(writer, "File Name,Size,Allocated,Modified,Files,Folders")?;
 
     for (idx, node) in snapshot.nodes.iter().enumerate() {
         if files_only && node.is_directory() {

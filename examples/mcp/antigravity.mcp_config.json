@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "datatree": {
+      "command": "datatree-mcp",
+      "args": ["mcp"]
+    }
+  }
+}

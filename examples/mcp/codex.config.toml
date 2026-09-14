@@ -1,0 +1,6 @@
+# Add to ~/.codex/config.toml
+# The key name is mcp_servers (not mcp.servers).
+
+[mcp_servers.datatree]
+command = "datatree-mcp"
+args = ["mcp"]

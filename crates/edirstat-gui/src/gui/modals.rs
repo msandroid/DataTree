@@ -33,28 +33,6 @@ pub enum LicenseTab {
 
 pub const EDIRSTAT_LICENSE: &str = include_str!("../../assets/LICENSE");
 
-fn count_nested_stats(
-    nodes: &[crate::arena::FileNode],
-    idx: u32,
-    files: &mut usize,
-    dirs: &mut usize,
-) {
-    if idx as usize >= nodes.len() {
-        return;
-    }
-    let node = &nodes[idx as usize];
-    if node.is_directory() {
-        *dirs += 1;
-        let mut curr = node.first_child;
-        while curr != crate::arena::NO_INDEX {
-            count_nested_stats(nodes, curr, files, dirs);
-            curr = nodes[curr as usize].next_sibling;
-        }
-    } else {
-        *files += 1;
-    }
-}
-
 fn collect_descendants(nodes: &[crate::arena::FileNode], idx: u32, out: &mut Vec<u32>) {
     if idx as usize >= nodes.len() {
         return;
@@ -362,107 +340,26 @@ impl GuiApp {
         }
 
         let current_snap = self.shared_state.current_snapshot.load();
-        let mut cloned_nodes = current_snap.nodes.to_vec();
-
-        let mut files_to_remove = 0;
-        let mut dirs_to_remove = 0;
-        let mut bytes_to_remove = 0u64;
-
-        for &node_idx in target_indices {
-            let idx = node_idx as usize;
-            if idx >= cloned_nodes.len() {
-                continue;
-            }
-            bytes_to_remove += cloned_nodes[idx].size;
-            count_nested_stats(
-                &cloned_nodes,
-                node_idx,
-                &mut files_to_remove,
-                &mut dirs_to_remove,
-            );
-        }
+        let result = edirstat_core::ops::remove_nodes(&current_snap, target_indices);
 
         self.shared_state
             .scan_stats
             .files_scanned
-            .fetch_sub(files_to_remove, Ordering::SeqCst);
+            .fetch_sub(result.files_removed, Ordering::SeqCst);
         self.shared_state
             .scan_stats
             .dirs_scanned
-            .fetch_sub(dirs_to_remove, Ordering::SeqCst);
+            .fetch_sub(result.dirs_removed, Ordering::SeqCst);
         self.shared_state
             .scan_stats
             .bytes_scanned
-            .fetch_sub(bytes_to_remove as usize, Ordering::SeqCst);
+            .fetch_sub(result.bytes_removed as usize, Ordering::SeqCst);
 
         // Clear chart caches to force re-computation
         self.size_dist_chart.cached_counts = None;
         self.dir_comp_chart.children_composition.clear();
 
-        for &node_idx in target_indices {
-            let node_idx = node_idx as usize;
-            if node_idx >= cloned_nodes.len() {
-                continue;
-            }
-
-            let node_size = cloned_nodes[node_idx].size;
-            let node_allocated = cloned_nodes[node_idx].allocated;
-            let parent_idx = cloned_nodes[node_idx].parent;
-            let is_dir = cloned_nodes[node_idx].is_directory();
-
-            // 1. Unlink the deleted item from its parent's sibling chain
-            if parent_idx != crate::arena::NO_INDEX {
-                let p_idx = parent_idx as usize;
-                let mut prev_sibling: Option<u32> = None;
-                let mut curr_sibling = cloned_nodes[p_idx].first_child;
-
-                while curr_sibling != crate::arena::NO_INDEX {
-                    if curr_sibling == node_idx as u32 {
-                        let next_sib = cloned_nodes[node_idx].next_sibling;
-                        if let Some(prev) = prev_sibling {
-                            cloned_nodes[prev as usize].next_sibling = next_sib;
-                        } else {
-                            cloned_nodes[p_idx].first_child = next_sib;
-                        }
-                        break;
-                    }
-                    // Explicitly advance the pointer
-                    prev_sibling = Some(curr_sibling);
-                    curr_sibling = cloned_nodes[curr_sibling as usize].next_sibling;
-                }
-            }
-
-            // 2. Roll back size metrics and file count up the ancestral line
-            let mut current_parent = if parent_idx == crate::arena::NO_INDEX {
-                None
-            } else {
-                Some(parent_idx)
-            };
-            while let Some(p_idx) = current_parent {
-                let p_node = &mut cloned_nodes[p_idx as usize];
-                p_node.size = p_node.size.saturating_sub(node_size);
-                p_node.allocated = p_node.allocated.saturating_sub(node_allocated);
-                if !is_dir {
-                    p_node.file_count = p_node.file_count.saturating_sub(1);
-                }
-                current_parent = p_node.parent_opt();
-            }
-
-            // 3. Isolate the node
-            cloned_nodes[node_idx].size = 0;
-            cloned_nodes[node_idx].allocated = 0;
-            cloned_nodes[node_idx].file_count = 0;
-            cloned_nodes[node_idx].first_child = crate::arena::NO_INDEX;
-            cloned_nodes[node_idx].next_sibling = crate::arena::NO_INDEX;
-        }
-
-        let dir_counts = Arc::new(precompute_dir_counts(&cloned_nodes));
-        let new_snapshot = crate::arena::FileArenaSnapshot {
-            nodes: std::sync::Arc::new(NodeStorage::Owned(cloned_nodes)),
-            string_pool: current_snap.string_pool.clone(),
-            dir_counts,
-        };
-        self.shared_state.store_snapshot(new_snapshot);
+        self.shared_state.store_snapshot(result.snapshot);
     }
 
     #[cfg(not(target_family = "wasm"))]
@@ -505,16 +402,13 @@ impl GuiApp {
 
             for (idx, path) in targets {
                 match path.symlink_metadata() {
-                    Ok(meta) => {
-                        let result = if to_trash {
-                            delete_to_trash(&path)
-                        } else if meta.is_dir() {
-                            std::fs::remove_dir_all(&path)
-                                .map_err(|e| (e.to_string(), is_permission_denied_io(&e)))
+                    Ok(_meta) => {
+                        let mode = if to_trash {
+                            edirstat_core::ops::DeleteMode::Trash
                         } else {
-                            std::fs::remove_file(&path)
-                                .map_err(|e| (e.to_string(), is_permission_denied_io(&e)))
+                            edirstat_core::ops::DeleteMode::Permanent
                         };
+                        let result = edirstat_core::ops::delete_path(&path, mode);
 
                         if let Err((err_msg, is_perm)) = result {
                             println!(
@@ -2672,46 +2566,6 @@ impl GuiApp {
 #[cfg(not(target_family = "wasm"))]
 fn is_permission_denied_io(err: &std::io::Error) -> bool {
     err.kind() == std::io::ErrorKind::PermissionDenied
-}
-
-/// Delete a path via the OS trash facility, mapping errors to the shared
-/// `(message, is_permission_denied)` form. The trash backend is native-only;
-/// on wasm this path is unreachable (no trash UI) and reports a plain error.
-#[cfg(not(target_family = "wasm"))]
-fn delete_to_trash(path: &std::path::Path) -> Result<(), (String, bool)> {
-    trash::delete(path).map_err(|e| (e.to_string(), is_permission_denied_trash(&e)))
-}
-
-/// Delete a path via the OS trash facility, mapping errors to the shared
-/// `(message, is_permission_denied)` form. The trash backend is native-only;
-/// on wasm this path is unreachable (no trash UI) and reports a plain error.
-#[cfg(target_family = "wasm")]
-#[allow(dead_code)]
-fn delete_to_trash(_path: &std::path::Path) -> Result<(), (String, bool)> {
-    Err(("trash is not supported in the browser".to_owned(), false))
-}
-
-#[cfg(not(target_family = "wasm"))]
-fn is_permission_denied_trash(err: &trash::Error) -> bool {
-    match err {
-        trash::Error::CouldNotAccess { .. } => true,
-        #[cfg(all(
-            unix,
-            not(target_os = "macos"),
-            not(target_os = "ios"),
-            not(target_os = "android")
-        ))]
-        trash::Error::FileSystem { source, .. } => {
-            source.kind() == std::io::ErrorKind::PermissionDenied
-        }
-        trash::Error::Os { description, .. } | trash::Error::Unknown { description } => {
-            let desc_lower = description.to_lowercase();
-            desc_lower.contains("permission")
-                || desc_lower.contains("access is denied")
-                || desc_lower.contains("denied")
-        }
-        _ => false,
-    }
 }
 
 #[cfg(test)]

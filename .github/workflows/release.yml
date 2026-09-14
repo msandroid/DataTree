@@ -23,18 +23,28 @@ jobs:
         uses: swatinem/rust-cache@v2
 
       - name: Compile optimized release binary
-        run: cargo build --release
+        run: cargo build --release -p edirstat -p edirstat-mcp
 
       - name: Stage Artifact
         run: |
           mkdir -p staging
           cp target/release/edirstat staging/edirstat-linux-x86_64
+          if [ -f target/release/datatree-mcp ]; then
+            cp target/release/datatree-mcp staging/datatree-mcp-linux-x86_64
+          fi
 
       - name: Store Production Binary as Private Artifact
         uses: actions/upload-artifact@v7
         with:
           name: edirstat-linux-x86_64
           path: staging/edirstat-linux-x86_64
+
+      - name: Store MCP helper as Private Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: datatree-mcp-linux-x86_64
+          path: staging/datatree-mcp-linux-x86_64
+          if-no-files-found: ignore
 
       # - name: Upload Asset to GitHub Release
       #   uses: softprops/action-gh-release@v3
@@ -320,16 +330,29 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v7
 
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-07-15
+          target: x86_64-pc-windows-msvc
+
+      - name: Cache dependencies
+        uses: swatinem/rust-cache@v2
+
       - name: Download Multivers Windows Wrapper
         uses: actions/download-artifact@v8
         with:
           name: multivers-windows-exe
           path: dl-multivers
 
+      - name: Build MCP helper
+        run: cargo build --release -p edirstat-mcp
+
       - name: Stage Payload for Inno Setup
         run: |
           mkdir -Force target\release
           cp -Force dl-multivers\edirstat_multivers.exe target\release\edirstat.exe
+          cp -Force dl-multivers\edirstat_multivers.exe target\release\datatree.exe
 
       - name: Compile Inno Setup Installer
         shell: powershell

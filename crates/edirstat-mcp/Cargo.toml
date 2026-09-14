@@ -1,0 +1,37 @@
+[package]
+name = "edirstat-mcp"
+description = "DataTree MCP server and JSON CLI — disk usage tools for AI agents and scripts."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "datatree-mcp"
+path = "src/bin/datatree-mcp.rs"
+
+[dependencies]
+edirstat = { path = "../edirstat", version = "2.2.0", default-features = false }
+edirstat-core = { path = "../edirstat-core", version = "2.2.0" }
+
+anyhow = "1.0.104"
+clap = { version = "4.6.6", features = ["derive"] }
+compact_str = "0.10.0"
+crossbeam = "0.8.5"
+directories = "6.0.0"
+parking_lot = { version = "0.12.5", features = ["hardware-lock-elision"] }
+rmcp = { version = "3.1.2", default-features = false, features = [
+    "server",
+    "macros",
+    "transport-io",
+    "schemars",
+] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.145"
+sysinfo = { version = "0.39.6", default-features = false, features = ["disk"] }
+thiserror = "2.0.20"
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread", "io-std"] }
+
+[dev-dependencies]
+serde_json = "1.0.145"

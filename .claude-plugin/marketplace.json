@@ -1,0 +1,17 @@
+{
+  "name": "datatree",
+  "owner": {
+    "name": "msandroid",
+    "url": "https://github.com/msandroid"
+  },
+  "metadata": {
+    "description": "DataTree plugins for disk usage analysis with MCP"
+  },
+  "plugins": [
+    {
+      "name": "datatree",
+      "source": "./plugins/datatree",
+      "description": "Local disk usage MCP server and skills for scan, search, and confirmed cleanup."
+    }
+  ]
+}

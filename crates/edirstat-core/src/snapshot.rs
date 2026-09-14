@@ -673,17 +673,29 @@ pub fn load_snapshot_from_bytes(
         } else {
             &[]
         };
-        let (col_mod_delta_slice, next) =
-            take_column(&decompressed_data, start, col_lengths[if is_v4 { 4 } else { 3 }])?;
+        let (col_mod_delta_slice, next) = take_column(
+            &decompressed_data,
+            start,
+            col_lengths[if is_v4 { 4 } else { 3 }],
+        )?;
         start = next;
-        let (col_cre_delta_slice, next) =
-            take_column(&decompressed_data, start, col_lengths[if is_v4 { 5 } else { 4 }])?;
+        let (col_cre_delta_slice, next) = take_column(
+            &decompressed_data,
+            start,
+            col_lengths[if is_v4 { 5 } else { 4 }],
+        )?;
         start = next;
-        let (col_file_count_slice, next) =
-            take_column(&decompressed_data, start, col_lengths[if is_v4 { 6 } else { 5 }])?;
+        let (col_file_count_slice, next) = take_column(
+            &decompressed_data,
+            start,
+            col_lengths[if is_v4 { 6 } else { 5 }],
+        )?;
         start = next;
-        let (col_child_count_slice, _next) =
-            take_column(&decompressed_data, start, col_lengths[if is_v4 { 7 } else { 6 }])?;
+        let (col_child_count_slice, _next) = take_column(
+            &decompressed_data,
+            start,
+            col_lengths[if is_v4 { 7 } else { 6 }],
+        )?;
 
         // Track cursor positions sequentially per column
 

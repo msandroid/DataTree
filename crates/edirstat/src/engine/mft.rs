@@ -599,7 +599,8 @@ fn extract_metadata_info(
             }
             0x80 => {
                 // Named $DATA stream (ADS)
-                named_allocated = named_allocated.saturating_add(attr.allocated_size.max(attr.value_length));
+                named_allocated =
+                    named_allocated.saturating_add(attr.allocated_size.max(attr.value_length));
             }
             0x20 => {
                 // $ATTRIBUTE_LIST Attribute
@@ -634,7 +635,11 @@ fn extract_metadata_info(
 
     let allocated = unnamed_allocated
         .saturating_add(named_allocated)
-        .max(if actual_size == 0 { 0 } else { unnamed_allocated });
+        .max(if actual_size == 0 {
+            0
+        } else {
+            unnamed_allocated
+        });
 
     MetadataInfo {
         links,

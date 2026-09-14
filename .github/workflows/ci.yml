@@ -93,18 +93,28 @@ jobs:
         uses: swatinem/rust-cache@v2
 
       - name: Compile optimized release binary
-        run: cargo build --release
+        run: cargo build --release -p edirstat -p edirstat-mcp
 
       - name: Stage Artifact
         run: |
           mkdir -p staging
           cp target/release/edirstat staging/edirstat-linux-x86_64
+          if [ -f target/release/datatree-mcp ]; then
+            cp target/release/datatree-mcp staging/datatree-mcp-linux-x86_64
+          fi
 
       - name: Upload Asset as Artifact
         uses: actions/upload-artifact@v7
         with:
           name: edirstat-linux-x86_64
           path: staging/edirstat-linux-x86_64
+
+      - name: Upload MCP helper as Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: datatree-mcp-linux-x86_64
+          path: staging/datatree-mcp-linux-x86_64
+          if-no-files-found: ignore
 
   build-wasm:
     name: Build Web (wasm32)
@@ -165,12 +175,20 @@ jobs:
         uses: swatinem/rust-cache@v2
 
       - name: Compile optimized release binary
-        run: cargo build --release --target x86_64-pc-windows-msvc
+        run: cargo build --release --target x86_64-pc-windows-msvc -p edirstat -p edirstat-mcp
 
       - name: Restructure Build Path
         run: |
           mkdir -Force target\release
           cp -Force target\x86_64-pc-windows-msvc\release\edirstat.exe target\release\edirstat.exe
+          if (Test-Path target\x86_64-pc-windows-msvc\release\datatree.exe) {
+            cp -Force target\x86_64-pc-windows-msvc\release\datatree.exe target\release\datatree.exe
+          } else {
+            cp -Force target\x86_64-pc-windows-msvc\release\edirstat.exe target\release\datatree.exe
+          }
+          if (Test-Path target\x86_64-pc-windows-msvc\release\datatree-mcp.exe) {
+            cp -Force target\x86_64-pc-windows-msvc\release\datatree-mcp.exe target\release\datatree-mcp.exe
+          }
 
       - name: Compile Inno Setup Installer
         shell: powershell
@@ -184,7 +202,13 @@ jobs:
 
       - name: Prepare Portable ZIP
         run: |
-          compress-archive -Path target\release\edirstat.exe -DestinationPath staging\edirstat-windows-portable-x86_64.zip
+          mkdir -Force staging
+          $zipItems = @(
+            "target\release\edirstat.exe",
+            "target\release\datatree.exe",
+            "target\release\datatree-mcp.exe"
+          ) | Where-Object { Test-Path $_ }
+          compress-archive -Path $zipItems -DestinationPath staging\edirstat-windows-portable-x86_64.zip -Force
 
       - name: Upload Portable ZIP as Artifact
         uses: actions/upload-artifact@v7
@@ -195,8 +219,8 @@ jobs:
       - name: Upload Installer as Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: edirstat-setup-x86_64.exe
-          path: staging\edirstat-setup-x86_64.exe
+          name: datatree-setup-x86_64.exe
+          path: staging\datatree-setup-x86_64.exe
 
   build-macos:
     name: Build & Package macOS

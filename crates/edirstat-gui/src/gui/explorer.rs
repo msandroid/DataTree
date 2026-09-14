@@ -446,10 +446,9 @@ impl QueryCoordinator {
             };
 
             // Single-pass O(N) reverse propagation of matched subtrees
-            let search_query_lower = parsed.as_ref().map_or_else(
-                || search_query.to_lowercase(),
-                |q| q.name.to_lowercase(),
-            );
+            let search_query_lower = parsed
+                .as_ref()
+                .map_or_else(|| search_query.to_lowercase(), |q| q.name.to_lowercase());
             for idx in (0..snapshot.nodes.len()).rev() {
                 let node = &snapshot.nodes[idx];
                 let name = snapshot.string_pool.get(node.name_id).unwrap_or("unknown");

@@ -965,10 +965,7 @@ impl GuiApp {
             {
                 match crate::csv::export_csv(snapshot, &path, files_only) {
                     Ok(()) => {
-                        crate::gui::toast_success(format!(
-                            "Exported CSV: {}",
-                            path.display()
-                        ));
+                        crate::gui::toast_success(format!("Exported CSV: {}", path.display()));
                     }
                     Err(e) => {
                         crate::gui::toast_error(format!("Failed to export CSV: {e}"));
@@ -1111,9 +1108,7 @@ impl GuiApp {
             ui.close_kind(egui::UiKind::Menu);
         }
 
-        let export_btn = ui.add_enabled_ui(has_nodes, |ui| {
-            ui.button(t!("export-csv"))
-        });
+        let export_btn = ui.add_enabled_ui(has_nodes, |ui| ui.button(t!("export-csv")));
         if export_btn.inner.clicked() {
             self.prompt_export_csv(snapshot);
             ui.close_kind(egui::UiKind::Menu);

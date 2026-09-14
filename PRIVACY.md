@@ -1,6 +1,6 @@
 # Privacy Policy for eDirStat (Offline / No-Features Distribution)
 
-**Last Updated:** September 6, 2026
+**Last Updated:** September 15, 2026
 
 ---
 
@@ -18,6 +18,7 @@
 This policy does **not** govern:
 1. **Online-Enabled Builds (e.g., standard GitHub Releases / portable desktop binaries)**: Standard desktop release binaries compiled with the `online` feature enabled include an automatic or user-initiated software update checker. That checker queries the public GitHub Releases API over HTTPS (`api.github.com`) to determine whether a newer version of the software is available.
 2. **Upcoming Cloud / SaaS Extensions & Companion Services**: Future extensions, cloud companion plugins, and web services that may provide remote snapshot storage, multi-machine comparison, historical preservation, or synchronization via SaaS. Any such networked services will be governed by their own distinct, separate Privacy Policy and Terms of Service upon public availability.
+3. **MCP / agent bridge (`datatree-mcp`)**: The optional Model Context Protocol server and JSON CLI run locally and do not upload telemetry to DataTree. When you connect that server to Cursor, Claude, Codex, Antigravity, or similar hosts, **tool results (file names, paths, sizes) become part of that host's model context** and may leave the machine according to that host's own terms. File contents are still not read.
 
 ---
 
@@ -102,3 +103,11 @@ If you have questions regarding this Privacy Policy or the security and privacy 
 - **Author / Developer**: Cody Wyatt Neiman (xangelix)
 - **Email**: [neiman@cody.to](mailto:neiman@cody.to)
 - **Project Issues & Audits**: [https://github.com/xangelix/edirstat/issues](https://github.com/xangelix/edirstat/issues)
+
+---
+
+## 10. MCP / agent tools (DataTree)
+
+`datatree-mcp` speaks MCP over stdio on the local machine. It inspects filesystem metadata only (the same class of data as the GUI: names, sizes, allocated size, timestamps). It does not read file contents and does not open network sockets of its own.
+
+Connecting it to an AI product is a separate trust decision: that product receives whatever the tools return. Prefer scanning project directories rather than entire system volumes when using a cloud-hosted model. Permanent delete is off unless `DATATREE_ALLOW_PERMANENT_DELETE=1` is set. Delete actions are written to a local audit log under the DataTree application data directory.

@@ -33,9 +33,12 @@ pub mod csv;
 pub mod error;
 pub mod file_id;
 pub mod fs_utils;
+pub mod ops;
+pub mod search;
 pub mod snapshot;
 pub mod state;
 pub mod time_utils;
 pub mod varint;
 
 pub use error::EdirstatError;
+pub use search::SearchQuery;

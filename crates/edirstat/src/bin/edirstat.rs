@@ -320,9 +320,39 @@ fn run_ui_bench(
     Ok(())
 }
 
+fn launch_datatree_mcp() -> anyhow::Result<()> {
+    let extra: Vec<std::ffi::OsString> = std::env::args_os().skip(2).collect();
+    let mut candidates = Vec::new();
+    if let Ok(exe) = std::env::current_exe()
+        && let Some(dir) = exe.parent()
+    {
+        candidates.push(dir.join("datatree-mcp"));
+        candidates.push(dir.join("datatree-mcp.exe"));
+    }
+    for bin in &candidates {
+        if bin.exists() {
+            let status = std::process::Command::new(bin).args(&extra).status()?;
+            std::process::exit(status.code().unwrap_or(1));
+        }
+    }
+    match std::process::Command::new("datatree-mcp")
+        .args(&extra)
+        .status()
+    {
+        Ok(status) => std::process::exit(status.code().unwrap_or(1)),
+        Err(err) => Err(anyhow::anyhow!(
+            "datatree-mcp was not found next to this executable or on PATH ({err})"
+        )),
+    }
+}
+
 fn main() -> anyhow::Result<()> {
     #[cfg(feature = "profile-tracy")]
     let _client = tracy_client::Client::start();
+
+    if std::env::args().nth(1).as_deref() == Some("mcp") {
+        return launch_datatree_mcp();
+    }
 
     if !cli_or_gui::is_launched_from_terminal() {
         cli_or_gui::hide_console_window();

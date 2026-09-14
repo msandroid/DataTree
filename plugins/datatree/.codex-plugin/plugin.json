@@ -1,0 +1,30 @@
+{
+  "name": "datatree",
+  "version": "2.2.0",
+  "description": "Local disk usage analysis for humans and AI agents. Scan folders, query size/allocated, search, export CSV, and delete only after a two-step confirm.",
+  "author": {
+    "name": "msandroid",
+    "url": "https://github.com/msandroid"
+  },
+  "homepage": "https://github.com/msandroid/DataTree",
+  "repository": "https://github.com/msandroid/DataTree",
+  "license": "MIT",
+  "keywords": ["disk-usage", "mcp", "datatree"],
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json",
+  "interface": {
+    "displayName": "DataTree",
+    "shortDescription": "Disk usage MCP + skills for scan, search, and confirmed cleanup.",
+    "longDescription": "Scan local folders with DataTree (NTFS MFT or parallel walk), query allocated size, search with *.iso / <100m / a>=1g, export CSV, and delete only after plan_delete + confirm_delete.",
+    "developerName": "msandroid",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/msandroid/DataTree",
+    "defaultPrompt": [
+      "Scan this workspace and list the 20 largest files by allocated size.",
+      "Find files matching *.iso or a>=1g under the current project.",
+      "Show disk volumes and which engine DataTree would use (MFT vs Walk).",
+      "Prepare a trash plan for obvious junk, then wait for me to confirm."
+    ]
+  }
+}
