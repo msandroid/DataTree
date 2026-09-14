@@ -1,8 +1,10 @@
 # DataTree
 
-![DataTree treemap](docs/screenshots/treemap-b-logo.png)
+![DataTree banner](assets/img/datatree-banner.png)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+[![Sponsor DataTree on GitHub Sponsors](assets/img/sponsor-banner.svg)](https://github.com/sponsors/msandroid)
 
 **DataTree** is a Windows-first disk usage analyzer built on the [eDirStat](https://github.com/Xangelix/edirstat) engine (MIT). It adds everyday disk-hygiene workflows inspired by tools like WizTree and WinDirStat: **Allocated** size, a sortable **File View**, **CSV export**, and size-aware search—while keeping eDirStat's fast NTFS `$MFT` path, treemap, plots, deduplicator, and compressed snapshots.
 
