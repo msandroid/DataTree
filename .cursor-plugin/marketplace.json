@@ -5,17 +5,19 @@
     "url": "https://github.com/msandroid"
   },
   "metadata": {
-    "description": "DataTree plugins for disk usage analysis with MCP"
+    "description": "DataTree plugins for local disk usage analysis with MCP"
   },
   "plugins": [
     {
       "name": "datatree",
-      "source": "./plugins/datatree",
+      "source": "plugins/datatree",
       "description": "Local disk usage MCP server and skills for scan, search, and confirmed cleanup.",
+      "version": "2.2.0",
       "homepage": "https://github.com/msandroid/DataTree",
       "repository": "https://github.com/msandroid/DataTree",
       "license": "MIT",
-      "keywords": ["disk-usage", "mcp", "datatree"]
+      "keywords": ["disk-usage", "mcp", "datatree", "ntfs"],
+      "logo": "plugins/datatree/assets/logo.svg"
     }
   ]
 }

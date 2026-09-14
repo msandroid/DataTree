@@ -29,3 +29,14 @@ Or copy this folder:
 - `mcp.json` — stdio server `datatree-mcp mcp`
 - `skills/` — `disk-usage`, `disk-cleanup`
 - `.cursor-plugin/`, `.claude-plugin/`, `.codex-plugin/`, `.agy-plugin/` — native manifests
+- `assets/logo.svg` — marketplace logo
+
+## Directories
+
+Public GitHub repo: https://github.com/msandroid/DataTree
+
+| Directory | Submit |
+|---|---|
+| Cursor Directory | https://cursor.directory/plugins/new — repo URL; auto-detects root `.mcp.json` |
+| Cursor Marketplace | https://cursor.com/marketplace/publish — repo URL; `.cursor-plugin/marketplace.json` |
+| Claude plugin directory | https://platform.claude.com/plugins/submit — plugin path `plugins/datatree` |

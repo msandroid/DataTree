@@ -12,6 +12,7 @@
   "repository": "https://github.com/msandroid/DataTree",
   "license": "MIT",
   "keywords": ["disk-usage", "mcp", "datatree", "ntfs", "cleanup"],
+  "logo": "./assets/logo.svg",
   "skills": "./skills/",
   "mcpServers": "./mcp.json"
 }
